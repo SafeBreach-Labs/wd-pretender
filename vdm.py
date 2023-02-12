@@ -12,7 +12,6 @@ class VDM:
     def version(self):
         # Get the version info resource
         version_info = self.pe.FileInfo[0]
-
         # Get the string table entry for the "FileVersion" key
         string_table = version_info[0].StringTable[0]
         
