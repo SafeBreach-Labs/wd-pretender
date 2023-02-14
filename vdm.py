@@ -1,3 +1,4 @@
+import io
 import pefile
 import struct
 import shutil
@@ -7,6 +8,8 @@ class VDM:
     def __init__(self, path):
         self.path = path
         self.pe = pefile.PE(self.path)
+
+        self.__extract_rmdx_from_resources()
 
     @property
     def version(self):
@@ -32,6 +35,9 @@ class VDM:
         vs_fixedfileinfo.FileVersionMS = ms
         vs_fixedfileinfo.FileVersionLS = ls
     
+    def get_rmdx(self) -> io.BytesIO:
+        return self.rmdx_data
+
     def do_inc_version_build_number(self):
         cur_version = self.version.split(b'.')
         
@@ -53,6 +59,16 @@ class VDM:
         # reopen vdm file
         self.pe = pefile.PE(self.path)
 
+    def __extract_rmdx_from_resources(self) -> io.BytesIO:
+        for resource_type in self.pe.DIRECTORY_ENTRY_RESOURCE.entries:
+            if resource_type.name is not None and resource_type.name.__str__() == "RT_RCDATA":
+                
+                for resource_id in resource_type.directory.entries:
+                    if resource_id.struct.Id == 1000:
+                        data_rva = resource_id.directory.entries[0].data.struct.OffsetToData
+                        size = resource_id.directory.entries[0].data.struct.Size
+                        self.rmdx_data = self.pe.get_memory_mapped_image()[data_rva:data_rva+size]                
+
     def __convert_bytes_version_to_msls(self, version):
         version_list = version.split(b'.')
         version_list = list(map(lambda x: int(x), version_list))
@@ -64,9 +80,8 @@ class VDM:
 
 def main():
     vdm = VDM(r"C:\Users\omeratt\work\random\mpasdlta.vdm")
-    print(vdm.version)
-    vdm.do_inc_version_build_number()
-    print(vdm.version)
+    rmdx = vdm.get_rmdx()
+    print(hex(len(rmdx)))
 
 
 if __name__ == "__main__":
