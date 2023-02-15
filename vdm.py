@@ -5,6 +5,7 @@ import shutil
 import binascii
 
 from rmdx import *
+from signatures import Signatures
 
 class VDM:
     def __init__(self, path: str):
@@ -12,9 +13,12 @@ class VDM:
         self.pe = pefile.PE(self.path)
 
         self.__extract_rmdx_from_resources()
-
+        
+        raw_signatures = self.rmdx.do_extract_signatures()
+        self.signatures = Signatures(raw_signatures)
+        
     @property
-    def version(self):
+    def version(self) -> bytes:
         # Get the version info resource
         version_info = self.pe.FileInfo[0]
         # Get the string table entry for the "FileVersion" key
@@ -36,9 +40,6 @@ class VDM:
         ms, ls = self.__convert_bytes_version_to_msls(new_version)
         vs_fixedfileinfo.FileVersionMS = ms
         vs_fixedfileinfo.FileVersionLS = ls
-    
-    def get_rmdx(self) -> io.BytesIO:
-        return self.rmdx_data
 
     def do_inc_version_build_number(self):
         cur_version = self.version.split(b'.')
@@ -73,7 +74,7 @@ class VDM:
                         size = resource_id.directory.entries[0].data.struct.Size
 
                         data = self.pe.get_memory_mapped_image()[data_rva:data_rva+size]                
-                        self.rmdx_data = RMDX(io.BytesIO(data))
+                        self.rmdx = RMDX(io.BytesIO(data))
 
     def __convert_bytes_version_to_msls(self, version: bytes):
         version_list = version.split(b'.')
@@ -84,12 +85,19 @@ class VDM:
 
         return ms, ls
 
-def main():
-    vdm = VDM(r"C:\Users\omeratt\work\random\mpasdlta.vdm")
-    rmdx = vdm.get_rmdx()
-    print(hex(rmdx.compressed_data_header.contents.CompressedSize))
-    print(binascii.hexlify(rmdx.compressed_data[:4]))
 
+class DeltaVdm(VDM):
+    def __init__(self, path: str):
+        super().__init__(path)
+        
+def main():
+    delta = DeltaVdm(r"C:\Users\omeratt\work\research\defender\updates\1.381.1691.0\forged\1.381.1699.0\updatepayload\mpasdlta.vdm")
+    rmdx = delta.rmdx
+    print(rmdx.validate_crc())
+    
+    for sig in delta.signatures:
+        if sig.base_header.Type == 0x73:
+            print(binascii.hexlify(sig.blob_data[:2]))
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,8 @@
 import io
 import ctypes
 
+from utils import *
+
 class RmdxStruct(ctypes.Structure):
     _fields_ = [
         ("Signature", ctypes.c_uint32),
@@ -21,14 +23,25 @@ class CompressedDataHeaderStruct(ctypes.Structure):
 
 class RMDX:
     def __init__(self, rmdx_data: io.BytesIO):
-        header = rmdx_data.read(0x20)
-        self.rmdx_header = ctypes.cast(header, ctypes.POINTER(RmdxStruct))
-        compressed_offset = self.rmdx_header.contents.CompressedDataOffset
+        
+        buffer = rmdx_data.read(0x20)
+        self.rmdx_header = RmdxStruct()
+        ctypes.memmove(ctypes.pointer(self.rmdx_header), buffer, ctypes.sizeof(self.rmdx_header))
+
+        coffset = self.rmdx_header.CompressedDataOffset
         
         # irrelevant data
-        rmdx_data.read(compressed_offset - 0x20) 
-        cdata_header = rmdx_data.read(8)
+        rmdx_data.read(coffset - 0x20) 
 
-        self.compressed_data_header = ctypes.cast(cdata_header, ctypes.POINTER(CompressedDataHeaderStruct))
-        self.compressed_data = rmdx_data.read(self.compressed_data_header.contents.CompressedSize)
+        buffer = rmdx_data.read(8)
+        self.cdata_header = CompressedDataHeaderStruct()
+        ctypes.memmove(ctypes.pointer(self.cdata_header), buffer, ctypes.sizeof(self.cdata_header))
         
+        self.cdata = rmdx_data.read(self.cdata_header.CompressedSize)
+    
+    def do_extract_signatures(self) -> bytes:
+        return decompress(self.cdata)
+    
+    def validate_crc(self) -> bool:
+        compressed_data = io.BytesIO(self.cdata)
+        return self.cdata_header.CompressedCrc == compute_crc32(compressed_data)

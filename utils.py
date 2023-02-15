@@ -1,5 +1,7 @@
 import io
+import zlib
 import struct
+import binascii
 
 from crctables import *
 
@@ -48,7 +50,13 @@ def compute_crc32(stream: io.BytesIO) -> int:
         crc32 = internal_compute_crc32(partial, crc32)
 
     return crc32
-        
+
+def compress(data: bytes) -> bytes:
+    pass
+
+def decompress(data: bytes) -> io.BytesIO:
+    decompressed_data = zlib.decompress(b"\x78\x9c" + data)
+    return io.BytesIO(decompressed_data)
 
 def main():
     pass
