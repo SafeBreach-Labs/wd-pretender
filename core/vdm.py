@@ -89,7 +89,12 @@ class VDM:
 class DeltaVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
-        
+
+class BaseVdm(VDM):
+    def __init__(self, path: str):
+        super().__init__(path)
+
+
 def main():
     delta = DeltaVdm(r"C:\Users\omeratt\work\research\defender\updates\1.381.1691.0\forged\1.381.1699.0\updatepayload\mpasdlta.vdm")
     rmdx = delta.rmdx
