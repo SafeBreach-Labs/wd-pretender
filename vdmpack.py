@@ -3,6 +3,7 @@ import argparse
 import binascii
 
 from core.signatures import SigsContainer
+from core.merge import SignatureMerger
 
 def main():
     parser = argparse.ArgumentParser(usage="%(prog)s --base path --delta path")
@@ -16,13 +17,18 @@ def main():
 
     base  = SigsContainer(base_raw_stream)
     delta = SigsContainer(delta_raw_stream)
+    delta.parse()
 
     for sig in delta.signatures:
-        if sig.header.Type == 0x73:
-            print(binascii.hexlify(sig.internal_data[:4]))
-
+        if sig.type == 0x73:
+            blob = sig.data
+            break
     
-    
+    blob.parse()
+    merger = SignatureMerger(base, blob)
+    merged_container = merger.do_merge()
 
+    print(hex(merged_container.crc32))
+    
 if __name__ == "__main__":
     main()

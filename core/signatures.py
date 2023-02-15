@@ -3,11 +3,8 @@ import enum
 import ctypes
 import struct
 
-class SignatureHeader(ctypes.Structure):
-    _fields_ = [
-        ("Type", ctypes.c_uint32, 8),
-        ("Length", ctypes.c_uint32, 24)
-    ]
+from core.utils import compute_crc32
+
 
 class SignatureDeltaBlobRecInfoHeader(ctypes.Structure):
     _fields_ = [
@@ -37,8 +34,18 @@ class BlobAction:
         self.data = data
 
 class DeltaBlob:
-    def __init__(self, blob_stream: io.BytesIO):
+    def __init__(self, blob_data: bytes):
         self.actions = []
+        self.merge_size, self.merge_crc = struct.unpack("<II", blob_data[:8])
+        self._blob = io.BytesIO(blob_data[8:])
+
+    @property
+    def blob(self):
+        self._blob.seek(0)
+        return self._blob
+
+    def parse(self):
+        blob_stream = self.blob
 
         while True:
             action_header = blob_stream.read(2)
@@ -52,45 +59,48 @@ class DeltaBlob:
                 data = blob_stream.read(blob_action.size)
             else: 
                 # the data here is acutlly the offset to copy from original base
-                data, = struct.unpack("<I", blob_action.read(4))
+                data, = struct.unpack("<I", blob_stream.read(4))
 
             blob_action.set_data(data)
             self.actions.append(blob_action)
 
 SIG_TYPES = {
-    0x73: SignatureDeltaBlobHeader,
-    0x74: SignatureDeltaBlobRecInfoHeader
+    0x73: DeltaBlob
 }
 
 class Signature:
     def __init__(self, header_data: bytes):
         header_data, = struct.unpack("<I", header_data)
 
-        self.header        = SignatureHeader()
-        self.header.Type   = header_data & 0xff 
-        self.header.Length = header_data >> 8
-
-        self.internal_header = None
+        self.type   = header_data & 0xff 
+        self.length = header_data >> 8
         
     def finalize(self, data: bytes):
         self.__do_parse_internal_signature(data)
 
     def __do_parse_internal_signature(self, signature_inner_data):
-        if self.header.Type in SIG_TYPES:
-            self.internal_header = SIG_TYPES[self.header.Type]()
-
-            ctypes.memmove(ctypes.pointer(self.internal_header),
-                           signature_inner_data,
-                           ctypes.sizeof(self.internal_header))
-
-            self.internal_data = signature_inner_data[ctypes.sizeof(self.internal_header):]
+        if self.type in SIG_TYPES:
+            self.data = SIG_TYPES[self.type](signature_inner_data)
         else:
-            self.internal_data = signature_inner_data
+            self.data = signature_inner_data
 
 class SigsContainer:
     def __init__(self, signatures_stream: io.BytesIO) -> None:
+        self._stream = signatures_stream
         self.signatures = []
 
+    @property
+    def stream(self) -> io.BytesIO:
+        self._stream.seek(0)
+        return self._stream
+
+    @property
+    def crc32(self):
+        return compute_crc32(self.stream)
+
+    def parse(self):
+        signatures_stream = self.stream
+        
         while True:
             header_data = signatures_stream.read(4)
 
@@ -98,10 +108,10 @@ class SigsContainer:
                 break
             
             current_signature = Signature(header_data)
-            signature_data = signatures_stream.read(current_signature.header.Length)
+            signature_data = signatures_stream.read(current_signature.length)
             current_signature.finalize(signature_data)
 
-            self.signatures.append(current_signature)        
+            self.signatures.append(current_signature)
 
     def __iter__(self):
         return self.signatures.__iter__()

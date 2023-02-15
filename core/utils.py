@@ -3,7 +3,7 @@ import zlib
 import struct
 import binascii
 
-from crctables import *
+from core.crctables import *
 
 def internal_compute_crc32(data, firstFour):
 
