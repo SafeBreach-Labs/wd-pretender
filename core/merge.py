@@ -1,13 +1,13 @@
 import io
 
-from core.signatures import DeltaBlob, BlobAction, SigsContainer
+from core.signatures import DeltaBlob, BlobAction, Signatures
 
 class SignatureMerger:
-    def __init__(self, base_container: SigsContainer, blob: DeltaBlob) -> None:
-        self.base = base_container
+    def __init__(self, base_signatures: Signatures, blob: DeltaBlob) -> None:
+        self.base = base_signatures
         self.blob = blob
 
-    def do_merge(self) -> SigsContainer:
+    def do_merge(self) -> Signatures:
         merge_stream = io.BytesIO()
         base_stream  = self.base.stream
 
@@ -20,4 +20,4 @@ class SignatureMerger:
                 merge_stream.write(action.data)
         
         merge_stream.seek(0)
-        return SigsContainer(merge_stream)
+        return Signatures(merge_stream)

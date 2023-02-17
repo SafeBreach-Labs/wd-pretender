@@ -52,7 +52,8 @@ def compute_crc32(stream: io.BytesIO) -> int:
     return crc32
 
 def compress(data: bytes) -> bytes:
-    pass
+    cdata = zlib.compress(data)[2:]
+    return cdata
 
 def decompress(data: bytes) -> io.BytesIO:
     decompressed_data = zlib.decompress(b"\x78\x9c" + data)

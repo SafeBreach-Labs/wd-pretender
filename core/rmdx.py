@@ -1,7 +1,8 @@
 import io
 import ctypes
 
-from utils import *
+from core.utils import *
+from core.signatures import Signatures
 
 class RmdxStruct(ctypes.Structure):
     _fields_ = [
@@ -20,6 +21,14 @@ class CompressedDataHeaderStruct(ctypes.Structure):
         ("CompressedSize", ctypes.c_uint32),
         ("CompressedCrc", ctypes.c_uint32),
     ]
+
+class RmdxBuilder:
+    def __init__(self, signatures: Signatures) -> None:
+        self.signatures = signatures.pack()
+
+    def build(self) -> bytes:
+        csigs = compress(self.signatures)
+        return csigs
 
 class RMDX:
     def __init__(self, rmdx_data: io.BytesIO):

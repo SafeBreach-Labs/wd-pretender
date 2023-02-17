@@ -3,20 +3,6 @@ import enum
 import ctypes
 import struct
 
-from core.utils import compute_crc32
-
-
-class SignatureDeltaBlobRecInfoHeader(ctypes.Structure):
-    _fields_ = [
-        ("Unknown", ctypes.c_uint32 * 19)
-    ]
-
-class SignatureDeltaBlobHeader(ctypes.Structure):
-    _fields_ = [
-        ("MergeSize", ctypes.c_uint32),
-        ("MergeCrc", ctypes.c_uint32),
-    ]
-
 class BlobAction:
     Types = enum.Enum('Types', {('COPY_FROM_DELTA', 0), ('COPY_FROM_BASE', 1)})
 
@@ -31,22 +17,54 @@ class BlobAction:
             self.size = header
 
     def set_data(self, data):
-        self.data = data
+        self.data = data 
 
-class DeltaBlob:
-    def __init__(self, blob_data: bytes):
-        self.actions = []
-        self.merge_size, self.merge_crc = struct.unpack("<II", blob_data[:8])
-        self._blob = io.BytesIO(blob_data[8:])
+class Signature:
+    def __init__(self, stype: ctypes.c_uint8, slength: ctypes.c_uint32, sdata: bytes):
+        self.type   = stype 
+        self.length = slength
+        self.data = sdata
 
-    @property
-    def blob(self):
-        self._blob.seek(0)
-        return self._blob
-
+    def pack(self) -> bytes:
+        header = struct.pack("<I", (self.length << 8) + self.type)
+        return header + self.data
+    
     def parse(self):
-        blob_stream = self.blob
+        pass
 
+class DeltaBlob(Signature):
+    class HeaderStruct(ctypes.Structure):
+        _fields_ = [
+            ("MergeSize", ctypes.c_uint32),
+            ("MergeCrc", ctypes.c_uint32)
+        ]
+
+    def __init__(self, stype: ctypes.c_uint8, slength: ctypes.c_uint32, sdata: bytes):
+        super().__init__(stype, slength, sdata)
+        self.header = None
+        self.actions = []
+        self.parse()
+    
+    @property
+    def mrgsize(self) -> ctypes.c_uint32:
+        return self.header.contents.MergeSize
+    
+    @mrgsize.setter
+    def mrgsize(self, size: ctypes.c_uint32):
+        self.header.contents.MergeSize = size
+    
+    @property
+    def mrgcrc(self) -> ctypes.c_uint32:
+        return self.header.contents.MergeCrc
+    
+    @mrgcrc.setter
+    def mrgcrc(self, crc: ctypes.c_uint32):
+        self.header.contents.MergeCrc = crc
+    
+    def parse(self):
+        self.header = ctypes.cast(self.data, ctypes.POINTER(DeltaBlob.HeaderStruct))
+        blob_stream = io.BytesIO(self.data[8:])
+        
         while True:
             action_header = blob_stream.read(2)
             
@@ -68,25 +86,9 @@ SIG_TYPES = {
     0x73: DeltaBlob
 }
 
-class Signature:
-    def __init__(self, header_data: bytes):
-        header_data, = struct.unpack("<I", header_data)
-
-        self.type   = header_data & 0xff 
-        self.length = header_data >> 8
-        
-    def finalize(self, data: bytes):
-        self.__do_parse_internal_signature(data)
-
-    def __do_parse_internal_signature(self, signature_inner_data):
-        if self.type in SIG_TYPES:
-            self.data = SIG_TYPES[self.type](signature_inner_data)
-        else:
-            self.data = signature_inner_data
-
-class SigsContainer:
-    def __init__(self, signatures_stream: io.BytesIO) -> None:
-        self._stream = signatures_stream
+class Signatures:
+    def __init__(self, stream: io.BytesIO) -> None:
+        self._stream = stream
         self.signatures = []
 
     @property
@@ -95,23 +97,63 @@ class SigsContainer:
         return self._stream
 
     @property
-    def crc32(self):
-        return compute_crc32(self.stream)
+    def length(self) -> ctypes.c_uint32:
+        self._stream.seek(0, 2)
+        return self._stream.tell()
 
     def parse(self):
         signatures_stream = self.stream
         
         while True:
-            header_data = signatures_stream.read(4)
-
-            if not header_data:
-                break
+            curr_signature = self.__read_signature_from_stream(signatures_stream)
             
-            current_signature = Signature(header_data)
-            signature_data = signatures_stream.read(current_signature.length)
-            current_signature.finalize(signature_data)
+            if curr_signature is None:
+                break
 
-            self.signatures.append(current_signature)
+            self.signatures.append(curr_signature)
+
+    def pack(self) -> bytes:
+        packed_bytes = b''
+
+        for signature in self.signatures:
+            packed_bytes += signature.pack()
+
+        return packed_bytes
+
+    def __read_signature_from_stream(self, stream: io.BytesIO) -> Signature:
+        header_data = stream.read(4)
+        
+        if not header_data:
+            return None
+        
+        header_data, = struct.unpack("<I", header_data)
+
+        stype   = header_data & 0xff 
+        slength = header_data >> 8
+        sdata   = stream.read(slength)
+
+        if stype in SIG_TYPES:
+            signature = SIG_TYPES[stype](stype, slength, sdata)
+        else:
+            signature = Signature(stype, slength, sdata)
+
+        return signature
 
     def __iter__(self):
         return self.signatures.__iter__()
+
+class Delta(Signatures):
+    def __init__(self, stream: io.BytesIO) -> None:
+        super().__init__(stream)
+        self.parse()
+
+    def do_extract_blob(self) -> DeltaBlob:
+        blob = None
+
+        for signature in self.signatures:
+            if signature.type == 0x73:
+                blob = signature
+                break
+
+        return blob
+        
