@@ -58,10 +58,3 @@ def compress(data: bytes) -> bytes:
 def decompress(data: bytes) -> io.BytesIO:
     decompressed_data = zlib.decompress(b"\x78\x9c" + data)
     return io.BytesIO(decompressed_data)
-
-def main():
-    pass
-
-if __name__ == "__main__":
-    main()
-        

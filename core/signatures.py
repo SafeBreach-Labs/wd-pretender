@@ -6,10 +6,18 @@ from ctypes import c_uint8, c_uint16, c_uint32
 from ctypes import Structure, pointer, sizeof, memmove
 
 class Signature:
+    class Header(Structure):
+        _fields_ = []
+
     def __init__(self, stype: c_uint8, slength: c_uint32, sdata: bytes):
         self.type   = stype 
         self.length = slength
         self.data = sdata
+
+        self.header = self.Header()
+        self.header_size = sizeof(self.header)
+        memmove(pointer(self.header), sdata, self.header_size)
+
         self.parse()
 
     def pack(self) -> bytes:
@@ -24,7 +32,9 @@ class Signature:
 
 class DeltaBlob(Signature):
     Type = 0x73
-    class HeaderStruct(Structure):
+
+    # ------ Inner Classes ------
+    class Header(Structure):
         _fields_ = [
             ("MergeSize", c_uint32),
             ("MergeCrc", c_uint32)
@@ -46,13 +56,23 @@ class DeltaBlob(Signature):
         def __init__(self, type: c_uint8, size: c_uint16, offset: c_uint32) -> None:
             super().__init__(type, size)
             self.offset = offset
+    # ------ Inner Classes ------
 
     def __init__(self, stype: c_uint8, slength: c_uint32, sdata: bytes):
-        self.header = DeltaBlob.HeaderStruct()
-        self.header_size = sizeof(self.header)
         self.actions = []
         super().__init__(stype, slength, sdata)
+            
+    def parse(self):
+        blob_stream = io.BytesIO(self.data[self.header_size:])
         
+        while True:
+            action = self.__read_blob_action(blob_stream)
+
+            if action is None:
+                break
+
+            self.actions.append(action)
+
     @property
     def mrgsize(self) -> c_uint32:
         return self.header.MergeSize
@@ -68,19 +88,6 @@ class DeltaBlob(Signature):
     @mrgcrc.setter
     def mrgcrc(self, crc: c_uint32):
         self.header.MergeCrc = crc
-    
-    def parse(self):
-        memmove(pointer(self.header), self.data, self.header_size)
-        
-        blob_stream = io.BytesIO(self.data[self.header_size:])
-        
-        while True:
-            action = self.__read_blob_action(blob_stream)
-
-            if action is None:
-                break
-
-            self.actions.append(action)
 
     def __read_blob_action(self, stream: io.BytesIO):
         header = stream.read(2)
@@ -105,7 +112,8 @@ class DeltaBlob(Signature):
 class Threat(Signature):
     Type = 0x5c
 
-    class HeaderStruct(Structure):
+    # ------ Inner Classes ------
+    class Header(Structure):
         _pack_ = 1
         _fields_ = [
             ("ThreatId", c_uint32),
@@ -113,16 +121,13 @@ class Threat(Signature):
             ("SignaturesCount", c_uint16),
             ("ThreatNameLength", c_uint16)
         ]
-
+    # ------ Inner Classes ------
+    
     def __init__(self, stype: c_uint8, slength: c_uint32, sdata: bytes):
-        self.header = Threat.HeaderStruct()
-        self.header_size = sizeof(self.header)
         self.name = None
         super().__init__(stype, slength, sdata)
 
-    def parse(self):
-        memmove(pointer(self.header), self.data, self.header_size)
-        
+    def parse(self):    
         self.name = self.data[self.header_size: self.header_size + self.header.ThreatNameLength]
         
         if b':' not in self.name:
