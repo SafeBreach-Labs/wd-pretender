@@ -129,7 +129,6 @@ class Threat(Signature):
             self.category, = struct.unpack("<H", self.name[:2])
             self.name = self.name[2:]
 
-
     def __str__(self) -> str:
         return "[{}] ID: {}, Signatures Inside: {}".format(self.name ,hex(self.header.ThreatId), self.header.SignaturesCount)  
 

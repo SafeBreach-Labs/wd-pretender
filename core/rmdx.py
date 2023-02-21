@@ -26,15 +26,30 @@ class CompressedDataHeaderStruct(Structure):
     ]
 
 class RMDX:
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, stream: io.BytesIO) -> None:
         self.header = RmdxStruct()
         self.unknown_data = b''
         self.compress_header = CompressedDataHeaderStruct()
 
-        if 'stream' in kwargs:
-            self.stream = kwargs["stream"]
-            self.__init_from_stream(kwargs["stream"])
-            
+        self.stream = stream
+        self.__init_from_stream(stream)
+        self.signatures_data = self.__extract_signatures()
+
+    def set_signatures(self, signatures: Signatures):
+        self.header.DecompressedDataSize = signatures.length
+        self.cdata = compress(signatures.stream.read())
+        self.compress_header.CompressedSize = len(self.cdata)
+        self.compress_header.CompressedCrc = compute_crc32(io.BytesIO(self.cdata))
+
+    def validate_crc(self) -> bool:
+        compressed_data = io.BytesIO(self.cdata)
+        return self.cdata_header.CompressedCrc == compute_crc32(compressed_data)
+    
+    def pack(self):
+        header = bytes(self.header)
+        cheader = bytes(self.compress_header)
+        return header + self.unknown_data + cheader + self.cdata
+
     def __init_from_stream(self, stream: io.BytesIO):
         buffer = stream.read(0x40)
         memmove(pointer(self.header), buffer, sizeof(self.header))
@@ -46,18 +61,8 @@ class RMDX:
         memmove(pointer(self.compress_header), buffer, sizeof(self.compress_header))
         self.cdata = stream.read(self.compress_header.CompressedSize)
     
-    def do_extract_signatures(self) -> io.BytesIO:
+    def __extract_signatures(self):
         return decompress(self.cdata)
-    
-    def validate_crc(self) -> bool:
-        compressed_data = io.BytesIO(self.cdata)
-        return self.cdata_header.CompressedCrc == compute_crc32(compressed_data)
-    
-    def pack(self):
-        header = bytes(self.header)
-        cheader = bytes(self.compress_header)
-
-        return header + self.unknown_data + cheader + self.cdata
 
 # class RmdxBuilder:
 #     def __init__(self, signatures: Signatures, template: RMDX) -> None:

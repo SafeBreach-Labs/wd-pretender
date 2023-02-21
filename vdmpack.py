@@ -25,11 +25,12 @@ def main():
     print(hex(delta_blob.mrgcrc))
 
     # change deltavdm to do: base signatures -> pached base signatures
-    merged_signatures.parse()
-    for signature in merged_signatures.threats:
-        print(signature)
-
-    #deltavdm.save(r"C:\Users\omeratt\work\random\valid\")
+    #merged_signatures.parse()
+    # for signature in merged_signatures.threats:
+    #     print(signature)
+    
+    deltavdm.version = b"1.381.1709.0"
+    deltavdm.save(r"C:\Users\omeratt\work\random\valid\test.vdm")
     
 
 if __name__ == "__main__":

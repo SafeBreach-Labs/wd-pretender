@@ -4,7 +4,7 @@ import struct
 import shutil
 import binascii
 
-from core.signatures import DeltaSignatures, BaseSignatures
+from core.signatures import Signatures, DeltaSignatures, BaseSignatures
 from core.rmdx import RMDX
 
 class VDM:
@@ -12,8 +12,9 @@ class VDM:
         self.path = path
         self.pe = pefile.PE(self.path)
 
-        self.__extract_rmdx_from_resources()
-        self.signatures_stream = self.rmdx.do_extract_signatures()
+        self.rmdx = self.__extract_rmdx_from_resources()
+        self.signatures_stream = self.rmdx.signatures_data
+        self.signatures = Signatures(self.signatures_stream)
         
     @property
     def version(self) -> bytes:
@@ -51,17 +52,18 @@ class VDM:
 
         self.version = new_version
 
-    # def overide_rmdx(self, rmdx: RMDX):
-    #     for resource_type in self.pe.DIRECTORY_ENTRY_RESOURCE.entries:
-    #         if resource_type.name is not None and resource_type.name.__str__() == "RT_RCDATA":
-    #             for resource_id in resource_type.directory.entries:
-    #                 if resource_id.struct.Id == 1000:
-    #                     data_rva = resource_id.directory.entries[0].data.struct.OffsetToData
+    def __pack_rmdx(self):
+        for resource_type in self.pe.DIRECTORY_ENTRY_RESOURCE.entries:
+            if resource_type.name is not None and resource_type.name.__str__() == "RT_RCDATA":
+                for resource_id in resource_type.directory.entries:
+                    if resource_id.struct.Id == 1000:
+                        data_rva = resource_id.directory.entries[0].data.struct.OffsetToData
 
-    #     self.pe.set_bytes_at_rva(data_rva, rmdx.pack())
+        self.pe.set_bytes_at_rva(data_rva, self.rmdx.pack())
 
     def save(self, outfile=None):
-
+        self.rmdx.set_signatures(self.signatures)
+        self.__pack_rmdx()
         self.pe.write(self.path + '.patched')
         self.pe.close()
         
@@ -85,7 +87,9 @@ class VDM:
                         size = resource_id.directory.entries[0].data.struct.Size
 
                         data = self.pe.get_memory_mapped_image()[data_rva:data_rva+size]                
-                        self.rmdx = RMDX(stream=io.BytesIO(data))
+                        return RMDX(stream=io.BytesIO(data))
+                    
+        return None
 
     def __convert_bytes_version_to_msls(self, version: bytes):
         version_list = version.split(b'.')
@@ -101,7 +105,7 @@ class DeltaVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
         self.signatures = DeltaSignatures(self.signatures_stream)
-
+    
 class BaseVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
