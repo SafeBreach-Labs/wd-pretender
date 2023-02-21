@@ -4,8 +4,8 @@ import struct
 import shutil
 import binascii
 
-from rmdx import *
-from signatures import Signatures
+from core.signatures import DeltaSignatures, BaseSignatures
+from core.rmdx import RMDX
 
 class VDM:
     def __init__(self, path: str):
@@ -13,9 +13,7 @@ class VDM:
         self.pe = pefile.PE(self.path)
 
         self.__extract_rmdx_from_resources()
-        
-        raw_signatures = self.rmdx.do_extract_signatures()
-        self.signatures = Signatures(raw_signatures)
+        self.signatures_stream = self.rmdx.do_extract_signatures()
         
     @property
     def version(self) -> bytes:
@@ -53,11 +51,24 @@ class VDM:
 
         self.version = new_version
 
-    def save(self):
+    # def overide_rmdx(self, rmdx: RMDX):
+    #     for resource_type in self.pe.DIRECTORY_ENTRY_RESOURCE.entries:
+    #         if resource_type.name is not None and resource_type.name.__str__() == "RT_RCDATA":
+    #             for resource_id in resource_type.directory.entries:
+    #                 if resource_id.struct.Id == 1000:
+    #                     data_rva = resource_id.directory.entries[0].data.struct.OffsetToData
+
+    #     self.pe.set_bytes_at_rva(data_rva, rmdx.pack())
+
+    def save(self, outfile=None):
+
         self.pe.write(self.path + '.patched')
         self.pe.close()
         
-        shutil.move(self.path + '.patched', self.path)
+        if outfile:
+            shutil.move(self.path + '.patched', outfile)
+        else:
+            shutil.move(self.path + '.patched', self.path)
 
         # reopen vdm file
         self.pe = pefile.PE(self.path)
@@ -74,7 +85,7 @@ class VDM:
                         size = resource_id.directory.entries[0].data.struct.Size
 
                         data = self.pe.get_memory_mapped_image()[data_rva:data_rva+size]                
-                        self.rmdx = RMDX(io.BytesIO(data))
+                        self.rmdx = RMDX(stream=io.BytesIO(data))
 
     def __convert_bytes_version_to_msls(self, version: bytes):
         version_list = version.split(b'.')
@@ -89,11 +100,12 @@ class VDM:
 class DeltaVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
+        self.signatures = DeltaSignatures(self.signatures_stream)
 
 class BaseVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
-
+        self.signatures = BaseSignatures(self.signatures_stream)
 
 def main():
     delta = DeltaVdm(r"C:\Users\omeratt\work\research\defender\updates\1.381.1691.0\forged\1.381.1699.0\updatepayload\mpasdlta.vdm")

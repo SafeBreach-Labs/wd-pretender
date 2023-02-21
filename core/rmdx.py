@@ -1,56 +1,80 @@
 import io
-import ctypes
+import copy
+
+from ctypes import memmove, sizeof, pointer, Structure, c_uint32
 
 from core.utils import *
 from core.signatures import Signatures
 
-class RmdxStruct(ctypes.Structure):
+class RmdxStruct(Structure):
     _fields_ = [
-        ("Signature", ctypes.c_uint32),
-        ("Timestamp", ctypes.c_uint32),
-        ("Unknown1", ctypes.c_uint32),
-        ("Options", ctypes.c_uint32),
-        ("Unknown2", ctypes.c_uint32),
-        ("Unknown3", ctypes.c_uint32),
-        ("CompressedDataOffset", ctypes.c_uint32),
-        ("DecompressedDataSize", ctypes.c_uint32)
+        ("Signature", c_uint32),
+        ("Timestamp", c_uint32),
+        ("Unknown1", c_uint32),
+        ("Options", c_uint32),
+        ("Unknown2", c_uint32),
+        ("Unknown3", c_uint32),
+        ("CompressedDataOffset", c_uint32),
+        ("DecompressedDataSize", c_uint32),
+        ("UnknownArray", c_uint32 * 8)
     ]
 
-class CompressedDataHeaderStruct(ctypes.Structure):
+class CompressedDataHeaderStruct(Structure):
     _fields_ = [
-        ("CompressedSize", ctypes.c_uint32),
-        ("CompressedCrc", ctypes.c_uint32),
+        ("CompressedSize", c_uint32),
+        ("CompressedCrc", c_uint32),
     ]
-
-class RmdxBuilder:
-    def __init__(self, signatures: Signatures) -> None:
-        self.signatures = signatures.pack()
-
-    def build(self) -> bytes:
-        csigs = compress(self.signatures)
-        return csigs
 
 class RMDX:
-    def __init__(self, rmdx_data: io.BytesIO):
-        
-        buffer = rmdx_data.read(0x20)
-        self.rmdx_header = RmdxStruct()
-        ctypes.memmove(ctypes.pointer(self.rmdx_header), buffer, ctypes.sizeof(self.rmdx_header))
+    def __init__(self, **kwargs) -> None:
+        self.header = RmdxStruct()
+        self.unknown_data = b''
+        self.compress_header = CompressedDataHeaderStruct()
 
-        coffset = self.rmdx_header.CompressedDataOffset
-        
-        # irrelevant data
-        rmdx_data.read(coffset - 0x20) 
+        if 'stream' in kwargs:
+            self.stream = kwargs["stream"]
+            self.__init_from_stream(kwargs["stream"])
+            
+    def __init_from_stream(self, stream: io.BytesIO):
+        buffer = stream.read(0x40)
+        memmove(pointer(self.header), buffer, sizeof(self.header))
 
-        buffer = rmdx_data.read(8)
-        self.cdata_header = CompressedDataHeaderStruct()
-        ctypes.memmove(ctypes.pointer(self.cdata_header), buffer, ctypes.sizeof(self.cdata_header))
+        compress_offset = self.header.CompressedDataOffset
+        self.unknown_data = stream.read(compress_offset - 0x40)
         
-        self.cdata = rmdx_data.read(self.cdata_header.CompressedSize)
+        buffer = stream.read(8)
+        memmove(pointer(self.compress_header), buffer, sizeof(self.compress_header))
+        self.cdata = stream.read(self.compress_header.CompressedSize)
     
-    def do_extract_signatures(self) -> bytes:
+    def do_extract_signatures(self) -> io.BytesIO:
         return decompress(self.cdata)
     
     def validate_crc(self) -> bool:
         compressed_data = io.BytesIO(self.cdata)
         return self.cdata_header.CompressedCrc == compute_crc32(compressed_data)
+    
+    def pack(self):
+        header = bytes(self.header)
+        cheader = bytes(self.compress_header)
+
+        return header + self.unknown_data + cheader + self.cdata
+
+# class RmdxBuilder:
+#     def __init__(self, signatures: Signatures, template: RMDX) -> None:
+#         self.template = template
+#         self.signatures = signatures.pack()
+
+
+#     @staticmethod
+#     def build(self, deltavdm: DeltaVdm, ) -> RMDX:
+#         rmdx = copy.deepcopy(self.template)
+#         rmdx.header.DecompressedDataSize = len(self.signatures)
+        
+#         csigs = compress(self.signatures)
+        
+#         rmdx.cdata = csigs
+#         rmdx.compress_header.CompressedSize = len(csigs)
+#         rmdx.compress_header.CompressedCrc = compute_crc32(io.BytesIO(csigs))
+#         print(hex(rmdx.compress_header.CompressedCrc))
+
+#         return rmdx

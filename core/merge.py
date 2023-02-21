@@ -1,23 +1,23 @@
 import io
 
-from core.signatures import DeltaBlob, BlobAction, Signatures
+from core.signatures import DeltaBlob, BaseSignatures
+from core.vdm import DeltaVdm, BaseVdm
 
 class SignatureMerger:
-    def __init__(self, base_signatures: Signatures, blob: DeltaBlob) -> None:
-        self.base = base_signatures
-        self.blob = blob
-
-    def do_merge(self) -> Signatures:
+    @staticmethod
+    def do_merge(base: BaseVdm, delta: DeltaVdm) -> BaseSignatures:
         merge_stream = io.BytesIO()
-        base_stream  = self.base.stream
 
-        for action in self.blob.actions:
-            if action.type == BlobAction.Types.COPY_FROM_BASE:
-                base_stream.seek(action.data)
-                data = base_stream.read(action.size)
+        blob = delta.signatures.find(DeltaBlob.Type)
+        bstream  = base.signatures.stream
+
+        for action in blob.actions:
+            if action.type == DeltaBlob.Action.Types.COPY_FROM_BASE.value:
+                bstream.seek(action.offset)
+                data = bstream.read(action.size)
                 merge_stream.write(data)
             else:
                 merge_stream.write(action.data)
         
         merge_stream.seek(0)
-        return Signatures(merge_stream)
+        return BaseSignatures(merge_stream)
