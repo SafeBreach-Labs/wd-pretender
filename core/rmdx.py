@@ -32,7 +32,8 @@ class RMDX:
 
         self.stream = stream
         self.__init_from_stream(stream)
-        self.signatures_data = self.__extract_signatures()
+        self.signatures_bytes = self.__extract_signatures()
+        self.signatures_stream = io.BytesIO(self.signatures_bytes)
 
     def update(self, signatures: Signatures):
         self.header.DecompressedDataSize = signatures.length
@@ -60,5 +61,5 @@ class RMDX:
         memmove(pointer(self.compress_header), buffer, sizeof(self.compress_header))
         self.cdata = stream.read(self.compress_header.CompressedSize)
     
-    def __extract_signatures(self):
+    def __extract_signatures(self) -> bytes:
         return decompress(self.cdata)

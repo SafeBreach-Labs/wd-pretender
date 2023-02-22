@@ -8,12 +8,15 @@ from core.signatures import Signatures, DeltaSignatures, BaseSignatures
 from core.rmdx import RMDX
 
 class VDM:
-    def __init__(self, path: str):
+    def __init__(self, path: str, _sig_cls=Signatures):
         self.path = path
         self.pe = pefile.PE(self.path)
         self.rmdx, self.rmdx_rva_offset = self.__extract_rmdx_from_resources()
-        self.signatures_stream = self.rmdx.signatures_data
-        self.signatures = Signatures(self.signatures_stream)
+
+        if not self.rmdx:
+            raise Exception("Failed to find RMDX")
+        
+        self.signatures = _sig_cls(self.rmdx.signatures_stream)
         
     def save(self, outfile=None):
         self.__update_pe_rmdx()
@@ -84,8 +87,7 @@ class VDM:
 
 class DeltaVdm(VDM):
     def __init__(self, path: str):
-        super().__init__(path)
-        self.signatures = DeltaSignatures(self.signatures_stream)
+        super().__init__(path, _sig_cls=DeltaSignatures)
     
     def do_inc_version_build_number(self):
         cur_version = self.version.split(b'.')
@@ -101,5 +103,4 @@ class DeltaVdm(VDM):
 
 class BaseVdm(VDM):
     def __init__(self, path: str):
-        super().__init__(path)
-        self.signatures = BaseSignatures(self.signatures_stream)
+        super().__init__(path, _sig_cls=BaseSignatures)
