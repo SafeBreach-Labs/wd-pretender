@@ -1,9 +1,10 @@
 import io
 import zlib
 import struct
-import binascii
 
-from core.crctables import *
+from ctypes import Structure, sizeof, memmove
+
+from core.utils.crctables import *
 
 def internal_compute_crc32(data, firstFour):
 
@@ -56,3 +57,28 @@ def compress(data: bytes) -> bytes:
 
 def decompress(data: bytes) -> bytes:
     return zlib.decompress(b"\x78\x9c" + data)
+
+def overlap(vec1: tuple, vec2: tuple) -> bool:
+    return vec1[1] >= vec2[0] and vec2[1] > vec1[0]
+
+def setter(_stream: io.BytesIO, _value: bytes, _offset: int):
+    _stream.seek(_offset)
+    _stream.write(_value)
+
+def memcpy(_stream: io.BytesIO, _offset: int, _pointer: object, _strcuture: Structure):
+    _stream.seek(_offset)
+    
+    s = _strcuture()
+    s_size = sizeof(s)
+    s_data = _stream.read(s_size)
+
+    memmove(_pointer, s_data, s_size)
+
+def intersect(_range1: tuple, _range2: tuple):
+    _start = max(_range1[0], _range2[0])
+    _end   = min(_range1[1], _range2[1])
+
+    return (_start, _end)
+
+def version_banner():
+    return "\n\t-- windows-offender: v1.0.0 (Safebreach Labs) --\n"
