@@ -2,7 +2,9 @@ import glob
 import logging
 
 from core.vdm import BaseVdm, DeltaVdm
+from core.signatures import Signature
 from core.definition_pair import DefinitionPair
+from core.signatures.threat import Threat, ThreatBegin, ThreatEnd
 
 class DefinitionUpdate:
     def __init__(self, definition_update_path: str):
@@ -60,3 +62,7 @@ class DefinitionUpdate:
 
         logging.log(100, f"Delete threat id= {id} from Anti-Virus definitions")
         self.mpavpair.delete_threat(id)
+    
+    def do_dos(self):
+        logging.info("Adding dos stub threat into Anti-Virus definitions")
+        self.mpavpair.add_dos_threat()

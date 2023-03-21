@@ -6,10 +6,9 @@ import shutil
 import binascii
 
 from core.rmdx import RMDX
-from core.signatures import Signatures
-from core.signatures.deltablob import DeltaBlob
-from core.signatures.delta_signatures import DeltaSignatures
-from core.signatures.base_signatures import BaseSignatures
+from core.signatures import Signature
+from core.signatures.threat import Threats
+from core.signatures.deltablob import Blob, CopyFromDelta
 
 class VDM:
     def __init__(self, path: str):
@@ -26,8 +25,9 @@ class VDM:
         if not self.rmdx:
             raise Exception("Failed to find RMDX")
         
-        self.signatures = Signatures(self.rmdx.get_signatures())
-        
+    def pack(self):
+        raise NotImplementedError
+
     def save(self, path=None):
         self.__update_pe_rmdx()
         
@@ -74,11 +74,8 @@ class VDM:
         vs_fixedfileinfo.FileVersionMS = ms
         vs_fixedfileinfo.FileVersionLS = ls
 
-    def get_stream(self):
-        return self.signatures.stream
-
     def __update_pe_rmdx(self):
-        self.rmdx.set_signatures(self.signatures.signatures_stream)
+        self.rmdx.set_signatures(self.pack())
         rmdx_data = self.rmdx.pack()
 
         for resource_type in self.pe.DIRECTORY_ENTRY_RESOURCE.entries:
@@ -102,27 +99,25 @@ class VDM:
 class DeltaVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
-        self.signatures = DeltaSignatures(self.rmdx.signatures_stream)
+        self._signatures = self.rmdx.signatures_stream
+        self._signatures.seek(0)
 
-    def set_delta_blob(self, blob: DeltaBlob):
-        self.signatures.set_delta_blob(blob.pack())
+        self._blob_rec_info = Signature.read_one(self._signatures)
+        self._blob          = Signature.read_one(self._signatures)
 
-    def extract_blob(self) -> DeltaBlob:
-        return self.signatures.get_delta_blob()
+    def pack(self) -> io.BytesIO:
+        blob_rec_data = self._blob_rec_info.pack().getvalue()
+        blob_data = self._blob.pack().getvalue()
 
-    def get_actions(self):
-        return self.signatures.get_delta_blob().actions
+        return io.BytesIO(blob_rec_data + blob_data)
 
-    def actions_seek(self, offset: int):
-        self.signatures.get_delta_blob().data.seek(offset)
+    def insert_signature_as_action(self, signature: bytes):
+        action = CopyFromDelta(signature)
+        self._blob.push(action)
 
-    def replace_actions(self, action, with_actions):
-        blob      = self.signatures.get_delta_blob()
-        remainder = blob.replace(action, with_actions)       
-        
-        self.signatures.set_delta_blob(blob.pack())
-
-        return remainder
+    @property
+    def blob(self) -> Blob:
+        return self._blob
 
     def inc_version_build_number(self):
         cur_version = self.version.split(b'.')
@@ -135,16 +130,21 @@ class DeltaVdm(VDM):
         new_version     = b'.'.join(cur_version)
 
         self.version = new_version
-
+               
 class BaseVdm(VDM):
     def __init__(self, path: str):
         super().__init__(path)
-        self.signatures = BaseSignatures(self.rmdx.signatures_stream)
+        self._signatures = self.rmdx.signatures_stream
+        self._threats = Threats(self._signatures)
 
     def save(self, path=None):
         if path:
             outfile = os.path.join(path, os.path.basename(self.path))
             shutil.copy(self.path, outfile)
+
+    @property
+    def signatures(self):
+        return self._signatures
 
     @property
     def threats(self):

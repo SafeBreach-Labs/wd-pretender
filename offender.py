@@ -25,11 +25,17 @@ def handle_delete_command(args, definition_update: DefinitionUpdate):
         
     definition_update.export()
 
+def handle_do_dos(args, definition_update: DefinitionUpdate):
+    definition_update.do_dos()
+    definition_update.export()
+
 def router(args, definition_update: DefinitionUpdate):
     if args.command == 'bypass':
         handle_delete_command(args, definition_update)
+    elif args.command == 'dos':
+        handle_do_dos(args, definition_update)
     else:
-        logging.error(f"unrecognized command {args.command}")
+        logging.error(f"Unrecognized command: {args.command}")
         pass
 
 def main():
@@ -44,6 +50,8 @@ def main():
     bypass_group = bypass_subparser.add_mutually_exclusive_group()
     bypass_group.add_argument('-name', help="delete all threats that his name containes <name>")
     bypass_group.add_argument('-id', help="delete threat by his id")
+
+    subparsers.add_parser('dos', help='causing a BSOD to the updated machine')
 
     args = options.parse_args()
 

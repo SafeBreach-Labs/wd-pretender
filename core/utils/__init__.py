@@ -40,6 +40,7 @@ def internal_compute_crc32(data, firstFour):
 
 
 def compute_crc32(stream: io.BytesIO) -> int:
+    stream.seek(0)
     crc32 = -1
 
     while True:
