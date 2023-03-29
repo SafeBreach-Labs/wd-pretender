@@ -131,7 +131,6 @@ class CopyFromBase(Action):
 
         if self.merge_interval.start < _interval.start:
             cur_size = _interval.start - self.merge_interval.start
-            print(f'cur_size ({cur_size}) = {_interval.start} - {self.merge_interval.start}')
             delta += cur_size
 
             #new_action = CopyFromBase(self.type, cur_size, offset)

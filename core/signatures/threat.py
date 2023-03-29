@@ -141,7 +141,7 @@ class Threat:
 
         while True:
             _sig = Signature.read_one(_stream)
-
+            
             if _sig.type == ThreatEnd.TYPE and _sig.id == _threat_begin.id:
                 _threat.end = _sig
                 break
@@ -178,8 +178,6 @@ class Threat:
         _threat_begin_size = self._threat_begin.size
         _signatures_size = len(self._signatures.getvalue())
         _threat_end_size = self._threat_end.size
-
-        print(f"begin_size: {hex(_threat_begin_size)} + raw_size: {hex(_signatures_size)} + end_size: {hex(_threat_end_size)}")
         return _threat_begin_size + _signatures_size + _threat_end_size
     
     @property
@@ -226,7 +224,6 @@ class Threats:
     def match(self, _name: bytes) -> Threat:
         for _threat in self.__iter__():
             if _name.lower() in _threat.name.lower():
-                print(f'threat interval = {_threat.interval}')
                 yield _threat
 
     def get(self, _id: c_uint32 = None, _name: bytes = None) -> Threat:
@@ -256,6 +253,5 @@ class Threats:
                 break
             
             _cur_threat.interval = (start, end)
-            #print(f'__iter__:interval = {_cur_threat.interval}')
             yield _cur_threat
     

@@ -47,7 +47,7 @@ class DefinitionUpdate:
         self.mpaspair.export(self.output_directory)
         self.mpavpair.export(self.output_directory)
 
-    def delete_match_threat_name(self, name: str):
+    def delete_match_threat_name(self, name: bytes):
         print('')
         logging.log(100, f"Delete threats from Anti-Spyware definitions")
         self.mpaspair.delete_all_threats_containing(name)      
@@ -64,5 +64,6 @@ class DefinitionUpdate:
         self.mpavpair.delete_threat(id)
     
     def do_dos(self):
+        self.delete_match_threat_name(b'FriendlyFiles')
         logging.info("Adding dos stub threat into Anti-Virus definitions")
         self.mpavpair.add_dos_threat()

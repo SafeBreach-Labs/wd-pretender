@@ -57,6 +57,7 @@ class DefinitionPair:
         #dos_threat.push(sig2)
 
         self.deltavdm.insert_signature_as_action(dos_threat.pack_bytes())
+
         self.finallize_blob()
 
     def delete_threat(self, id:int = None, name:bytes = None, finallize_blob:bool = True):
@@ -84,7 +85,6 @@ class DefinitionPair:
             threat.interval += fix_value
             self.__internal_delete_threat(threat.interval)
             fix_value -= threat.size
-            print(f"~~~~ fix: {fix_value} ~~~~~")
 
         self.finallize_blob()
 
@@ -98,9 +98,6 @@ class DefinitionPair:
 
         for action in merger.yield_merge():
             if Interval.overlaps(action.merge_interval, _threat_interval):
-                print(action)
-                print(f'Action Interval: {action.interval}')
-                print(f'Action Merge Interval: {action.merge_interval} vs Threat Interval: {_threat_interval}')
                 intersection = Interval.intersect(action.merge_interval, _threat_interval)
 
                 _cur_new_actions = action.slice(intersection)
@@ -113,13 +110,6 @@ class DefinitionPair:
                 break
         
         if old_actions:
-            print("old actions:")
-            for old in old_actions:
-                print(old)
-
-            print("-------------------- new actions ----------------------")
-            for new in new_actions:
-                print(new)
             self.deltavdm.blob.replace(old_actions, new_actions)
     
     def __normalize_actions(self, _actions):
