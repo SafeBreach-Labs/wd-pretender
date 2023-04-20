@@ -74,4 +74,6 @@ class DefinitionUpdate:
     def do_dos(self):
         logging.info("Adding DOS-Stub threat")
         self.mpaspair.add_dos_threat()
-        
+
+    def delete_documents(self):
+        self.mpavpair.modify_specific_signature_to_delete_documetns()
