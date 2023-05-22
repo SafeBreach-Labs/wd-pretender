@@ -1,25 +1,40 @@
 import struct
 
 from io import BytesIO
-from ctypes import c_uint16, c_uint32
+from ctypes import c_uint8, c_uint16, c_uint32
 
 from core.signatures import Signature
 from core.utils.interval import Interval
+from core.utils import compute_crc32
 
 class ThreatBegin(Signature):
     TYPE = 0x5c
     def __init__(self,
-                _id: c_uint32 = 0,
-                _unknown1: c_uint32 = 0,
-                _unknown2: c_uint16 = 0,
-                _name: bytes = b'',
-                _footer: bytes = b'\x00\x00\x05\x40\x05\x82\x24\x00\x04\x00'):
-        self._id          = _id
-        self._unknown1    = _unknown1
-        self._unknown2    = _unknown2
-        self._name_length = len(_name)
-        self._name        = _name
-        self._footer      = _footer
+                id: c_uint32 = 0,
+                unknown1: c_uint16 = 0,
+                counter: c_uint16 = 1,
+                category: c_uint16 = 0,
+                name: bytes = b'',
+                unknown2: c_uint16 = 0,
+                resources: list[c_uint16] = list(),
+                sevirity_id: c_uint8 = 5,
+                action: c_uint8 = 0x81,
+                footer: bytes = b'\x24\x00\x04\x00'):
+        self._id           = id
+        self._unknown1     = unknown1
+        self._counter      = counter
+        self._category     = category
+        self._name_length  = len(name)
+        self._name         = name
+        self._unknown2     = unknown2
+        self._sevirity_id  = sevirity_id
+        self._action       = action
+
+        if resources:
+            self._sections = resources
+        else:
+            self._sections = [0x4000]
+        self._footer = footer
         
         _data = self._pack_data_bytes()
 
@@ -37,6 +52,13 @@ class ThreatBegin(Signature):
         self._name = self._data.read(self._name_length)
         self._footer = self._data.read()
     
+    def inc_signature_counter(self):
+        if self._sections[self._counter - 1] < 0x7fff:
+            self._sections[self._counter - 1] += 1
+        else:
+            self._counter += 1
+            self._sections.append(0x4001)
+
     @property
     def name(self):
         return self._name
@@ -71,11 +93,10 @@ class ThreatBegin(Signature):
         self._unknown2 = _value
 
     def _pack_data_bytes(self):
-        return struct.pack("<IIHI", 
-                            self._id, 
-                            self._unknown1,
-                            self._unknown2,
-                            self._name_length) + self._name + self._footer
+        first_header = struct.pack("<IHHHHH", self._id, self._unknown1, self._counter, self._category, len(self._name), self._unknown2)
+        secend_header = struct.pack("H" * len(self._sections), *self._sections) + struct.pack("<BB", self._sevirity_id, self._action)
+
+        return first_header + self._name + secend_header + self._footer
         
     def __str__(self) -> str:
         return "[{}] ID: {}".format(self.name ,hex(self.id))  
@@ -116,6 +137,7 @@ class Threat:
     def push(self, _signature: Signature):
         self._signatures.seek(0, 2)
         self._signatures.write(_signature.pack().getvalue())
+        self._threat_begin.inc_signature_counter()
     
     def pop(self):
         self._signatures.seek(0)
@@ -178,8 +200,6 @@ class Threat:
         _threat_begin_size = self._threat_begin.size
         _signatures_size = len(self._signatures.getvalue())
         _threat_end_size = self._threat_end.size
-
-        print(f"begin_size: {hex(_threat_begin_size)} + raw_size: {hex(_signatures_size)} + end_size: {hex(_threat_end_size)}")
         return _threat_begin_size + _signatures_size + _threat_end_size
     
     @property
@@ -223,12 +243,6 @@ class Threats:
         self._threats.seek(0, 2)
         self._threats.write(_threat.pack_bytes())
 
-    def match(self, _name: bytes) -> Threat:
-        for _threat in self.__iter__():
-            if _name.lower() in _threat.name.lower():
-                print(f'threat interval = {_threat.interval}')
-                yield _threat
-
     def get(self, _id: c_uint32 = None, _name: bytes = None) -> Threat:
         for _threat in self.__iter__():
             if _id:
@@ -237,13 +251,28 @@ class Threats:
             elif _name:
                 if _threat.name == _name:
                     return _threat
-        
         return None
+    
+    def match(self, _name: bytes) -> Threat:
+        for _threat in self.__iter__():
+            if _name.lower() in _threat.name.lower():
+                yield _threat
 
+    def get_stream(self):
+        return self._threats
+    
     def pack(self) -> BytesIO:
         self._threats.seek(0)
         return self._threats
     
+    def size(self):
+        self._threats.seek(0, 2)
+        return self._threats.tell()
+
+    def crc32(self):
+        self._threats.seek(0)
+        return compute_crc32(self._threats)
+
     def __iter__(self):
         self._threats.seek(0)
 
@@ -256,6 +285,5 @@ class Threats:
                 break
             
             _cur_threat.interval = (start, end)
-            #print(f'__iter__:interval = {_cur_threat.interval}')
             yield _cur_threat
     

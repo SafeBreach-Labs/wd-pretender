@@ -38,8 +38,14 @@ class Interval:
     
     @staticmethod
     def intersect(_interval1, _interval2):
+        if not Interval.overlaps(_interval1, _interval2):
+            return None
+        
         _start = max(_interval1.start, _interval2.start)
         _end = min(_interval1.end, _interval2.end)
 
         return Interval(_start, _end)
-        
+
+    @staticmethod
+    def contains(_interval, index) -> bool:
+        return _interval.start <= index and index <= _interval.end

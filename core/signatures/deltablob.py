@@ -9,7 +9,13 @@ from core.signatures import Signature
 from core.utils.interval import Interval
 
 class Action:
-    def __init__(self, _type: c_uint8 = 0, _size: c_uint16 = 0):
+    UNDEFINED = 0
+    LEFT = 1
+    RIGHT = 2
+    def __init__(self,
+                 _type: c_uint8 = 0,
+                 _size: c_uint16 = 0,
+                 _direction: c_uint8 = UNDEFINED):
         self._type = _type
         self._size = _size
 
@@ -17,6 +23,8 @@ class Action:
         self._interval = Interval()
         # interval within the merge signatres
         self._merge_interval = Interval()
+
+        self._direction = _direction
 
     def slice(self, _interval: Interval):
         raise NotImplementedError
@@ -92,6 +100,17 @@ class CopyFromDelta(Action):
         super().__init__(self.Type, len(data))
         self.data = data
 
+    def insert(self, index: int, data: bytes):
+        if index == self.merge_interval.start:
+            return [CopyFromDelta(data + self.data)]
+        elif index == self.merge_interval.end:
+            return [CopyFromDelta(self.data + data)]
+        else:
+            relative_index = index-self.merge_interval.start
+            first = self.data[0: relative_index]
+            last = self.data[relative_index:]
+            return [CopyFromDelta(first + data + last)]
+
     def slice(self, _interval: Interval):
         new_actions = []
         sliced_data = b''
@@ -120,10 +139,20 @@ class CopyFromBase(Action):
         super().__init__(self.Type, _size)
         self.offset = _offset
 
-    def pack_bytes(self):
-        x = (self.size - 6) | 0x8000
-        return struct.pack("<HI", x, self.offset)
-    
+    def insert(self, index: int, data: bytes):
+        if index == self.merge_interval.start:
+            return [CopyFromDelta(data), CopyFromBase(self.size, self.offset)]
+        elif index == self.merge_interval.end:
+            return [CopyFromBase(self.size, self.offset), CopyFromDelta(data)]
+        else:
+            first_size = index - self.merge_interval.start
+            last_size = self.merge_interval.end - index
+            last_offset = self.offset + first_size
+
+            first = CopyFromBase(first_size, self.offset)
+            last = CopyFromBase(last_size, last_offset)
+            return [first, CopyFromDelta(data), last]
+        
     def slice(self, _interval: Interval):
         new_actions = []
         offset = self.offset
@@ -131,28 +160,24 @@ class CopyFromBase(Action):
 
         if self.merge_interval.start < _interval.start:
             cur_size = _interval.start - self.merge_interval.start
-            print(f'cur_size ({cur_size}) = {_interval.start} - {self.merge_interval.start}')
             delta += cur_size
 
-            #new_action = CopyFromBase(self.type, cur_size, offset)
-            #new_action.set_merge_position((self.merge_start, self.merge_end + delta))
-            
             new_actions.append(CopyFromBase(cur_size, offset))
             offset += cur_size
             
         if self.merge_interval.end > _interval.end:
             cur_size = self.merge_interval.end - _interval.end
             offset += (_interval.end - _interval.start)
-            cur_start = self.merge_interval.end + delta
             delta += cur_size
-
-            #new_action = CopyFromBase(self.type, cur_size, offset)
-            #new_action.set_merge_position((cur_start, cur_start + cur_size))
 
             new_actions.append(CopyFromBase(cur_size, offset))
         
         return new_actions
 
+    def pack_bytes(self):
+        x = (self.size - 6) | 0x8000
+        return struct.pack("<HI", x, self.offset)
+    
     def __str__(self):
         return f'[CopyFromBase] -> size: {hex(self._size)}, offset: {hex(self.offset)}'       
 
