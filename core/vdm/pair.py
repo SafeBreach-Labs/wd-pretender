@@ -1,18 +1,18 @@
 import logging
 
 from dual.add import AddThreat
-from dual.delete import DeleteInterval, DeleteIntervals
 from dual.modify import ModifyInterval
+from dual.delete import DeleteInterval, DeleteIntervals
+
+from core.vdm.base import BaseVdm
+from core.vdm.delta import DeltaVdm
 
 from core.merge import Merger
-from core.vdm import BaseVdm, DeltaVdm
-from core.utils.interval import Interval
-
 from core.signatures import Signature
-from core.signatures.deltablob import Action, CopyFromDelta
 from core.signatures.threat import Threat, ThreatBegin, ThreatEnd
+from core.signatures.deltablob import Action, CopyFromDelta
 
-class VdmPair:
+class Pair:
     def __init__(self, basevdm: BaseVdm, deltavdm: DeltaVdm):
         self.basevdm = basevdm
         self.deltavdm = deltavdm

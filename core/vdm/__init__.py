@@ -3,13 +3,9 @@ import os
 import pefile
 import struct
 import shutil
-import logging
 import binascii
 
 from core.rmdx import RMDX
-from core.signatures import Signature
-from core.signatures.threat import Threats
-from core.signatures.deltablob import Blob, CopyFromDelta
 
 class VDM:
     def __init__(self, path: str):
@@ -96,59 +92,3 @@ class VDM:
         ls = int(binascii.hexlify((struct.pack('>2H', *version_list[2:]))), base=16)
 
         return ms, ls
-
-class DeltaVdm(VDM):
-    def __init__(self, path: str):
-        super().__init__(path)
-        self._signatures = self.rmdx.signatures_stream
-        self._signatures.seek(0)
-
-        self._blob_rec_info = Signature.read_one(self._signatures)
-        self._blob          = Signature.read_one(self._signatures)
-
-    def pack(self) -> io.BytesIO:
-        blob_rec_data = self._blob_rec_info.pack().getvalue()
-        blob_data = self._blob.pack().getvalue()
-
-        return io.BytesIO(blob_rec_data + blob_data)
-
-    def insert_signature_as_action(self, signature: bytes):
-        action = CopyFromDelta(signature)
-        self._blob.push(action)
-
-    @property
-    def blob(self) -> Blob:
-        return self._blob
-
-    def inc_version_build_number(self):
-        cur_version = self.version.split(b'.')
-        
-        # convert the build number to int and inc by 1
-        build_number = int(cur_version[2])
-        build_number = str(build_number + 1).encode()
-
-        cur_version[2]  = build_number
-        new_version     = b'.'.join(cur_version)
-
-        logging.info(f"{self.basename}: {self.version.decode()} -> {new_version.decode()}")
-
-        self.version = new_version
-               
-class BaseVdm(VDM):
-    def __init__(self, path: str):
-        super().__init__(path)
-        self._signatures = self.rmdx.signatures_stream
-        self._threats = Threats(self._signatures)
-
-    def save(self, path=None):
-        if path:
-            outfile = os.path.join(path, os.path.basename(self.path))
-            shutil.copy(self.path, outfile)
-
-    @property
-    def signatures(self):
-        return self._signatures
-
-    @property
-    def threats(self):
-        return self.signatures.values

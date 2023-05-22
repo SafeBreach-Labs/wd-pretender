@@ -1,8 +1,9 @@
 import glob
 import logging
 
-from core.vdmpair import VdmPair
-from core.vdm import BaseVdm, DeltaVdm
+from core.vdm.pair import Pair
+from core.vdm.base import BaseVdm
+from core.vdm.delta import DeltaVdm
 
 AV = 0x1
 AS = 0x2
@@ -37,8 +38,8 @@ class DefinitionUpdate:
                 logging.info("Loading mpavdlta.vdm")
                 mpavpair["mpavdlta"] = DeltaVdm(file)
 
-        self.mpaspair = VdmPair(mpaspair["mpasbase"], mpaspair["mpasdlta"])
-        self.mpavpair = VdmPair(mpavpair["mpavbase"], mpavpair["mpavdlta"])
+        self.mpaspair = Pair(mpaspair["mpasbase"], mpaspair["mpasdlta"])
+        self.mpavpair = Pair(mpavpair["mpavbase"], mpavpair["mpavdlta"])
 
     def set_output_path(self, path):
         self.output_directory = path

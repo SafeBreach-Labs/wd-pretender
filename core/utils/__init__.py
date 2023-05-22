@@ -46,4 +46,4 @@ def intersect(_range1: tuple, _range2: tuple):
     return (_start, _end)
 
 def version_banner():
-    return "\n\t-- Defender-Pretender: v1.0.0 (Safebreach Labs) --\n"
+    return "\n\t-- Defender-Pretender: v1.0.0 (SafeBreach Labs) --\n"

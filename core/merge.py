@@ -1,9 +1,10 @@
 import io
 
-from core.signatures.deltablob import CopyFromBase
-from core.vdm import BaseVdm, DeltaVdm
-from core.signatures.deltablob import Action
+from core.vdm.base import BaseVdm
+from core.vdm.delta import DeltaVdm
 from core.signatures.threat import Threats
+from core.signatures.deltablob import Action
+from core.signatures.deltablob import CopyFromBase
 
 class Merger:
     def __init__(self, basevdm: BaseVdm, deltavdm: DeltaVdm):
