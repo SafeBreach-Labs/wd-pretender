@@ -1,15 +1,18 @@
 import glob
 import logging
 
+from core.vdmpair import VdmPair
 from core.vdm import BaseVdm, DeltaVdm
-from core.signatures import Signature
-from core.definition_pair import DefinitionPair
-from core.signatures.threat import Threat, ThreatBegin, ThreatEnd
+
+AV = 0x1
+AS = 0x2
+BOTH = AV | AS
 
 class DefinitionUpdate:
-    def __init__(self, definition_update_path: str):
+    def __init__(self, definition_update_path: str, target: int = BOTH):
         self.update_path = definition_update_path
         self.output_directory = '.'
+        self.target = target
 
         logging.info("Initializing DefinitionUpdate")
         self.init_update_payload_files()
@@ -35,8 +38,8 @@ class DefinitionUpdate:
                 logging.info("Loading mpavdlta.vdm")
                 mpavpair["mpavdlta"] = DeltaVdm(file)
 
-        self.mpaspair = DefinitionPair(mpaspair["mpasbase"], mpaspair["mpasdlta"])
-        self.mpavpair = DefinitionPair(mpavpair["mpavbase"], mpavpair["mpavdlta"])
+        self.mpaspair = VdmPair(mpaspair["mpasbase"], mpaspair["mpasdlta"])
+        self.mpavpair = VdmPair(mpavpair["mpavbase"], mpavpair["mpavdlta"])
 
     def set_output_path(self, path):
         self.output_directory = path

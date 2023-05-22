@@ -3,6 +3,7 @@ import os
 import pefile
 import struct
 import shutil
+import logging
 import binascii
 
 from core.rmdx import RMDX
@@ -128,6 +129,8 @@ class DeltaVdm(VDM):
 
         cur_version[2]  = build_number
         new_version     = b'.'.join(cur_version)
+
+        logging.info(f"{self.basename}: {self.version.decode()} -> {new_version.decode()}")
 
         self.version = new_version
                
