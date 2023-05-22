@@ -16,7 +16,6 @@ class DefinitionUpdate:
 
         logging.info("Initializing DefinitionUpdate")
         self.init_update_payload_files()
-        logging.info("Loading Done")
 
     def init_update_payload_files(self):
         vdm_files = glob.glob(self.update_path + '/*.vdm')
@@ -50,23 +49,31 @@ class DefinitionUpdate:
         self.mpaspair.export(self.output_directory)
         self.mpavpair.export(self.output_directory)
 
-    def delete_match_threat_name(self, name: bytes):
+    def delete_match_threat(self, name: str):
         print('')
-        logging.log(100, f"Delete threats from Anti-Spyware definitions")
-        self.mpaspair.delete_all_threats_containing(name)      
         
-        logging.log(100, f"Delete threats from Anti-Virus definitions")
-        self.mpavpair.delete_all_threats_containing(name)
+        if self.target & AS:
+            logging.log(100, f"Delete threats from Anti-Spyware definitions")
+            self.mpaspair.delete_match(name)      
+        
+        if self.target & AV:
+            logging.log(100, f"Delete threats from Anti-Virus definitions")
+            self.mpavpair.delete_match(name)
 
-    def delete_threat_by_id(self, id: int):
+    def delete_threat(self, id: int = None, name: bytes = None):
         print('')
-        logging.log(100, f"Delete threat id= {id} from Anti-Spyware definitions")
-        self.mpaspair.delete_threat(id)
+        
+        if self.target & AS:
+            logging.log(100, f"Delete threat {id if id else name} from Anti-Spyware definitions")
+            self.mpaspair.delete_threat(id, name)
 
-        logging.log(100, f"Delete threat id= {id} from Anti-Virus definitions")
-        self.mpavpair.delete_threat(id)
+        if self.target & AV:
+            logging.log(100, f"Delete threat {id if id else name} from Anti-Virus definitions")
+            self.mpavpair.delete_threat(id, name)
     
     def do_dos(self):
-        self.delete_match_threat_name(b'FriendlyFiles')
-        logging.info("Adding dos stub threat into Anti-Virus definitions")
-        self.mpavpair.add_dos_threat()
+        logging.info("Adding DOS-Stub threat")
+        self.mpaspair.add_dos_threat()
+
+    def delete_documents(self):
+        self.mpavpair.modify_specific_signature_to_delete_documetns()

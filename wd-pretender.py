@@ -64,9 +64,9 @@ def main():
 
     args = options.parse_args()
 
-    logging.info(f'Definitions Path: {args.def_path}')
-    defination_update_path = args.def_path
-    output_path = args.output
+    logging.info(f'Definitions Path: {args.d}')
+    defination_update_path = args.d
+    output_path = args.o
 
     definition_update = DefinitionUpdate(defination_update_path)
     definition_update.set_output_path(output_path)

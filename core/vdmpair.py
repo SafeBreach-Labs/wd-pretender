@@ -54,7 +54,6 @@ class VdmPair:
         stream.seek(0)
         target = None
 
-
         while True:
             signature = Signature.read_one(stream)
 
