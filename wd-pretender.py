@@ -1,6 +1,10 @@
+<<<<<<< Updated upstream:offender.py
 import re
 import os
 import glob
+=======
+import winreg
+>>>>>>> Stashed changes:wd-pretender.py
 import logging
 import argparse
 
@@ -43,7 +47,12 @@ def main():
     print(version_banner())
 
     options = argparse.ArgumentParser(usage="%(prog)s command [options]", add_help = True, description = "Windows Defender Update")
+<<<<<<< Updated upstream:offender.py
     options.add_argument('--output', default='.', help='output folder for the exported vdm files')
+=======
+    options.add_argument('-o', default='.', help='output folder for the exported vdm files')
+    options.add_argument('--def_path', default=get_defualt_definition_update_path(), help='set explicit definition update path')
+>>>>>>> Stashed changes:wd-pretender.py
     subparsers = options.add_subparsers(dest='command', required=True)
 
     bypass_subparser = subparsers.add_parser('bypass', help='bypass windows defender threats')
