@@ -7,15 +7,15 @@ class OffenderLogger(logging.Formatter):
 
     def format(self, record):
         if record.levelno == logging.INFO:
-            record.bullet = '[*]'
+            record.bullet = '[+]'
         elif record.levelno == logging.DEBUG:
             record.bullet = '[DEBUG]:'
-        elif record.levelno == logging.WARNING:
+        elif record.levelno == logging.ERROR:
             record.bullet = '[!]'
         elif record.levelno == 100: #header
             record.bullet = '[#]'
         else:
-            record.bullet = '[+]'
+            record.bullet = '[~]'
         
         return logging.Formatter.format(self, record)
     

