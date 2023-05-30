@@ -13,7 +13,7 @@ from core.signatures.threat import Threat, ThreatBegin, ThreatEnd
 from core.signatures.deltablob import Action, CopyFromDelta
 
 class Pair:
-    def __init__(self, basevdm: BaseVdm, deltavdm: DeltaVdm):
+    def __init__(self, basevdm: BaseVdm = None, deltavdm: DeltaVdm = None):
         self.basevdm = basevdm
         self.deltavdm = deltavdm
     
@@ -138,6 +138,14 @@ class Pair:
     def delta(self):
         return self.deltavdm
     
+    @delta.setter
+    def delta(self, delta: DeltaVdm):
+        self.deltavdm = delta
+
     @property
     def base(self):
         return self.basevdm
+    
+    @base.setter
+    def base(self, base: BaseVdm):
+        self.basevdm = base
