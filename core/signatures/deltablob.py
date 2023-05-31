@@ -1,7 +1,5 @@
 import io
 import struct
-
-from numpy import array
 from ctypes import c_uint8, c_uint16, c_uint32
 
 from core.utils import overlap

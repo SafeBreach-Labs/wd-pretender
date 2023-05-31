@@ -1,4 +1,4 @@
-
+import os
 import winreg
 
 import logging
@@ -63,16 +63,17 @@ def main():
     subparsers.add_parser('test', help='test')
 
     args = options.parse_args()
-
     logging.info(f'Definitions Path: {args.d}')
     defination_update_path = args.d
     output_path = args.o
+    if not os.path.exists(output_path):
+        raise FileNotFoundError(f'Directory "{output_path}" was not found')
 
     definition_update = DefinitionUpdate(defination_update_path)
     definition_update.set_output_path(output_path)
 
     router(args, definition_update)
-
+    logging.info('Done!')
 
 if __name__ == "__main__":
     main()
