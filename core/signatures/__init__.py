@@ -39,6 +39,10 @@ class Signature:
 
         stype   = header_data & 0xff 
         slength = header_data >> 8
+        
+        if slength == 0xffffff:
+            slength, = struct.unpack("<I", _stream.read(4))
+
         sdata   = _stream.read(slength)
    
         if stype in SIG_TYPES:
