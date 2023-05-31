@@ -7,6 +7,9 @@ import argparse
 from core.utils import version_banner
 from core.utils.logger import init_logger
 from core.definition_update import DefinitionUpdate
+from core.definitions import Definitions
+
+from core.features.delete import DeletePEMockFile
 
 def get_defualt_definition_update_path() -> str:
     logging.info("Getting Signatures Location ...")
@@ -68,10 +71,16 @@ def main():
     defination_update_path = args.d
     output_path = args.o
 
-    definition_update = DefinitionUpdate(defination_update_path)
-    definition_update.set_output_path(output_path)
+    definitions = Definitions(defination_update_path)
+    anti_spyware_pair = definitions.get_anti_spayware_definitions()
+    
+    DeletePEMockFile(anti_spyware_pair, ['test', 'asdasd']).run()
+    anti_spyware_pair.export(r'C:\Users\omeratt\work\lab')
 
-    router(args, definition_update)
+    #definition_update = DefinitionUpdate(defination_update_path)
+    #definition_update.set_output_path(output_path)
+
+    #router(args, definition_update)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,11 @@
 import io
 
-from core.vdm.pair import Pair
 from core.signatures.threat import Threats
 from core.signatures.deltablob import Action
 from core.signatures.deltablob import CopyFromBase
 
 class Merger:
-    def __init__(self, pair: Pair):
+    def __init__(self, pair):
         self.pair = pair
 
     def yield_merge(self) -> Action:

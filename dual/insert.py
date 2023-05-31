@@ -11,7 +11,7 @@ class InsertData(IAction):
         self.data = data
 
     def run(self):
-        for action in Merger(self.pair.base, self.pair.deltavdm).yield_merge():
+        for action in Merger(self.pair).yield_merge():
             if Interval.contains(action.merge_interval, self.index):
                 old_actions = [action]
                 new_actions = action.insert(self.index, self.data)

@@ -128,7 +128,7 @@ class Pair:
         self.deltavdm.save(path)
 
     def finallize_blob(self):
-        merger = Merger(self.basevdm, self.deltavdm)
+        merger = Merger(self)
         threats = merger.merge()
 
         self.deltavdm.blob.mergesize = threats.size()
