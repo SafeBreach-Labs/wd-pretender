@@ -9,6 +9,7 @@ from core.utils.logger import init_logger
 from core.definitions import Definitions
 
 from core.features.delete import DeletePEMockFile
+from core.features.bypass import BypassEDRRule
 
 def get_defualt_definition_update_path() -> str:
     logging.info("Getting Signatures Location ...")
@@ -20,7 +21,11 @@ def get_defualt_definition_update_path() -> str:
 
 def router(args, definitions: Definitions):
     if args.command == 'bypass':
-        pass
+        match_str = args.match
+        logging.info("Deleting All Threats From Anti-Virus Definitions")
+        BypassEDRRule(definitions.get_anti_virus_definitions(), match_str).run()
+        logging.info("Deleting All Threats From Anti-Spyware Definitions")
+        BypassEDRRule(definitions.get_anti_spayware_definitions(), match_str).run()
     elif args.command == 'delete':
         string = base64.b64decode(args.string)
         hstrs = [string]
