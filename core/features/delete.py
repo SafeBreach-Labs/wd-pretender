@@ -28,7 +28,7 @@ class DeletePEMockFile(Feature):
                     logging.info(f"Found Threat Rule: {threat.name}")
                     threat_to_modify = threat
                     break
-        
+    
         if not threat_to_modify:
             logging.info("Couln't Find Threat Rule To Modify")
             return False
@@ -46,4 +46,4 @@ class DeletePEMockFile(Feature):
         
         logging.info('Modifing ...')
         ModifyInterval(self.pair, interval, pestr_bytes).run()
-        super().run()
+        return super().run()
