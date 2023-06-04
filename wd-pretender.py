@@ -1,4 +1,4 @@
-import json
+import os
 import base64
 import winreg
 import logging
@@ -56,9 +56,14 @@ def main():
 
     logging.info(f'Definitions Path: {args.d}')
     definations_path = args.d
+    
+    if not os.path.exists(args.o):
+        raise FileNotFoundError(f'Directory "{args.o}" was not found')
+
     definitions = Definitions(definations_path)
 
     router(args, definitions)
+    logging.info('Done!')
 
 if __name__ == "__main__":
     main()

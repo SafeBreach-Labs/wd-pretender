@@ -1,6 +1,5 @@
 import io
 import struct
-
 from ctypes import c_uint8, c_uint16, c_uint32
 
 from core.signatures import Signature

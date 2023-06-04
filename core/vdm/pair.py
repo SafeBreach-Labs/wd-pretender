@@ -22,7 +22,7 @@ class Pair:
         deleter = DeleteIntervals(self, [])
 
         for threat in threats.match(name):
-            print(f"      Deleting -> {threat.name}")
+            print(f"      Deleting => {threat.name}")
             deleter.add(threat.interval)
 
         deleter.run()
