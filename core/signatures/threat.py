@@ -133,10 +133,13 @@ class Threat:
         self._signatures   = BytesIO()
 
         self._interval = Interval(_threat_begin.interval.start, _threat_end.interval.end)
+        self._signature_counter = 0
 
     def push(self, _signature: Signature):
         self._signatures.seek(0, 2)
         self._signatures.write(_signature.pack().getvalue())
+
+        self._signature_counter += 1
         self._threat_begin.inc_signature_counter()
     
     def pop(self):
@@ -171,6 +174,10 @@ class Threat:
             _threat.push(_sig)
         
         return _threat
+
+    @property
+    def signature_counter(self):
+        return self._signature_counter
 
     @property
     def signatures(self):

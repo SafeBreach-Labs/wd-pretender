@@ -11,7 +11,7 @@ class VDM:
     def __init__(self, path: str):
         self.pe       = pefile.PE(path)
         self.path     = path
-        self.basename = os.path.basename(self.path)
+        self.basename = os.path.basename(self.path).lower()
 
         self.rmdx_rva, self.rmdx_size = self.get_rmdx_offset_and_size()
         rmdx_data = self.pe.get_data(self.rmdx_rva, self.rmdx_size)
@@ -55,6 +55,10 @@ class VDM:
         string_table = version_info[0].StringTable[0]
         
         return string_table.entries[b"FileVersion"]
+
+    @property
+    def name(self):
+        return self.basename
 
     @version.setter
     def version(self, new_version: bytes):

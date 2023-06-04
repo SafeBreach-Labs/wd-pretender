@@ -13,7 +13,7 @@ class DeleteInterval(IAction):
         old_actions = []
         new_actions = []
 
-        for action in Merger(self.pair.base, self.pair.deltavdm).yield_merge():
+        for action in Merger(self.pair).yield_merge():
             intersection = Interval.intersect(self.interval, action.merge_interval)
             
             if intersection:

@@ -39,6 +39,10 @@ class Signature:
 
         stype   = header_data & 0xff 
         slength = header_data >> 8
+        
+        if slength == 0xffffff:
+            slength, = struct.unpack("<I", _stream.read(4))
+
         sdata   = _stream.read(slength)
    
         if stype in SIG_TYPES:
@@ -95,6 +99,8 @@ class Signature:
         return self.data
 
     def __pack_header_bytes(self):
+        if self.length >= 0xffffff:
+            return struct.pack("<II", (0xffffff << 8) + self.type, self.length)
         return struct.pack("<I", (self.length << 8) + self.type)
 
     def __str__(self) -> str:

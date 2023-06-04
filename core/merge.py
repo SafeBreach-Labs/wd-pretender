@@ -1,21 +1,18 @@
 import io
 
-from core.vdm.base import BaseVdm
-from core.vdm.delta import DeltaVdm
 from core.signatures.threat import Threats
 from core.signatures.deltablob import Action
 from core.signatures.deltablob import CopyFromBase
 
 class Merger:
-    def __init__(self, basevdm: BaseVdm, deltavdm: DeltaVdm):
-        self.basevdm = basevdm
-        self.deltavdm = deltavdm
+    def __init__(self, pair):
+        self.pair = pair
 
     def yield_merge(self) -> Action:
         merge_stream = io.BytesIO()
-        basesigs = self.basevdm.signatures
+        basesigs = self.pair.base.signatures
 
-        for action in self.deltavdm.blob.actions:
+        for action in self.pair.delta.blob.actions:
             start = merge_stream.tell()
 
             if action.type == CopyFromBase.Type:
@@ -33,9 +30,9 @@ class Merger:
         
     def merge(self):
         merge_stream = io.BytesIO()
-        basesigs = self.basevdm.signatures
+        basesigs = self.pair.base.signatures
 
-        for action in self.deltavdm.blob.actions:
+        for action in self.pair.delta.blob.actions:
             if action.type == CopyFromBase.Type:
                 basesigs.seek(action.offset)
                 data = basesigs.read(action.size)
