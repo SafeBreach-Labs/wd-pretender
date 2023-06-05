@@ -14,9 +14,7 @@ class BypassEDRRule(Feature):
     
     def run(self):
         deleter = DeleteIntervals(self.pair, [])
-
         threats = Merger(self.pair).merge()
-
         logging.info(f"Threats Containing: {self.threat_name}")
 
         for threat in threats:
