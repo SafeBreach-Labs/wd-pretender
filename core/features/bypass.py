@@ -17,7 +17,7 @@ class BypassEDRRule(Feature):
 
         threats = Merger(self.pair).merge()
 
-        logging.info(f"Searching All Threats Containing: {self.threat_name}")
+        logging.info(f"Threats Containing: {self.threat_name}")
 
         for threat in threats:
             if self.threat_name.lower().encode() in threat.name.lower():

