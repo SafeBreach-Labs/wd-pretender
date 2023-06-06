@@ -40,8 +40,14 @@ class DeletePEMockFile(Feature):
         logging.debug(f"The Signature Interval: {interval}")
 
         # modify with the new hstrs
+        logging.info("Creating Signature With The Strs:")
+        
         pestr = PEHStr()
-        pestr.push('SafeBreack LTD Mock File')
+        
+        for hstr in self.hstrs:
+            print(f"\t{hstr}")
+            pestr.push(hstr.decode())
+
         pestr_bytes = pestr.pack().getvalue()
         
         logging.info('Modifing ...')
