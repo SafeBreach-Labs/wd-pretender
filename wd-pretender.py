@@ -10,6 +10,7 @@ from core.definitions import Definitions
 
 from core.features.delete import DeletePEMockFile
 from core.features.bypass import BypassEDRRule
+from core.features.friendly import AddFriendlyFile
 
 def get_defualt_definition_update_path() -> str:
     logging.info("Getting Signatures Location ...")
@@ -29,8 +30,9 @@ def router(args, definitions: Definitions):
     elif args.command == 'delete':
         string = base64.b64decode(args.string)
         hstrs = [string]
-
-        DeletePEMockFile(definitions.get_anti_spayware_definitions(), hstrs).run()    
+        DeletePEMockFile(definitions.get_anti_spayware_definitions(), hstrs).run()
+    elif args.command == 'friendly':
+        AddFriendlyFile(definitions.get_anti_spayware_definitions(), args.hash.encode()).run()
     else:
         logging.error(f"Unrecognized command: {args.command}")
         exit(1)
@@ -49,6 +51,9 @@ def argument_parser():
     delete_parser = subparsers.add_parser('delete', help='delete file by modifying rules')
     delete_parser.add_argument('string', type=str, help='indication strings within the pefile (base64)')
     
+    friendly_parser = subparsers.add_parser('friendly', help='add hash to friendly files threat')
+    friendly_parser.add_argument('hash', type=str, help='sha256 hash of the file')
+
     return options.parse_args()
 
 def main():

@@ -1,10 +1,9 @@
 import struct
 
-from io import BytesIO
-from ctypes import c_uint16, c_uint32
+from ctypes import c_uint16
 
 from core.signatures import Signature
-from core.utils.interval import Interval
+
 
 
 class HStr:
