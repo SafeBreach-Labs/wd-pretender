@@ -1,9 +1,8 @@
 import io
 import struct
-import binascii
 
 from ctypes import Structure, c_uint32
-from ctypes import memmove, sizeof, pointer, addressof
+from ctypes import pointer
 
 from core.utils import compute_crc32, compress, decompress
 from core.utils import memcpy, setter

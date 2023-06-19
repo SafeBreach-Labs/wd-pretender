@@ -1,7 +1,7 @@
 import sys
 import logging
 
-class OffenderLogger(logging.Formatter):
+class PretenderLogger(logging.Formatter):
     def __init__(self) -> None:
         super().__init__("%(bullet)s %(message)s", None)
 
@@ -22,7 +22,7 @@ class OffenderLogger(logging.Formatter):
 
 def init_logger():
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(OffenderLogger())
+    handler.setFormatter(PretenderLogger())
     
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)

@@ -40,7 +40,7 @@ class VDM:
 
     def get_rmdx_offset_and_size(self):
         for resource_type in self.pe.DIRECTORY_ENTRY_RESOURCE.entries:
-            if resource_type.name is not None and resource_type.name.__str__() == "RT_RCDATA":
+            if resource_type.name.__str__() == "RT_RCDATA":
                 for resource_id in resource_type.directory.entries:
                     if resource_id.struct.Id == 1000:
                         data_rva = resource_id.directory.entries[0].data.struct.OffsetToData
