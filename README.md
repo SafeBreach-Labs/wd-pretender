@@ -5,7 +5,8 @@ Compatible with Windows Defender platform version 4.18.2302.7 and earlier.
 
 
 ## Description
-wd-pretender is a powerful tool designed to simulate a Windows Defender update using the [CVE-2023-24934](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2023-24934) vulnerability. This tool is intended for educational and research purposes only and should be used responsibly and with proper authorization. The primary objective of wd-pretender is to demonstrate potential security vulnerabilities and raise awareness about the importance of robust endpoint security measures.
+wd-pretender is a powerful tool designed to simulate a Windows Defender update using the [CVE-2023-24934](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2023-24934) vulnerability. This tool is intended for educational and research purposes only and should be used responsibly and with proper authorization. 
+
 
 ## Features
 - Bypass EDR Rules: Bypass certain Windows Defender security measures and remain undetected.
@@ -27,7 +28,8 @@ positional arguments:
   {bypass,delete}
     bypass             bypass windows defender rules by threat name
     delete             delete file by modifying rules
-
+    freindly           add hash to friendly files
+    
 optional arguments:
   -h, --help           show this help message and exit
   -o OUTPUT            output folder for the exported vdm files
@@ -54,7 +56,7 @@ python wd-pretender.py -o C:\BypassDefs bypass lazagne
 Output:
 
 ```
-python .\wd-pretender.py -o C:\Users\omeratt\work\lab bypass lazagne
+python .\wd-pretender.py -o C:\Definitions bypass lazagne
 
         -- Defender-Pretender: v1.0.0 (SafeBreach Labs) --
 
@@ -78,7 +80,7 @@ python .\wd-pretender.py -o C:\Users\omeratt\work\lab bypass lazagne
         Deleting => b'\xcc\xe1Lazagne'
 [+] Enumerating Anti-Spyware Definitions
 [+] Threats Containing: lazagne
-[+] Exporting Definitions into: C:\Users\omeratt\work\lab
+[+] Exporting Definitions into: C:\Definitions
 [+] mpasdlta.vdm: 1.391.491.0 => 1.391.492.0
 [+] mpavdlta.vdm: 1.391.491.0 => 1.391.492.0
 [+] Done!
