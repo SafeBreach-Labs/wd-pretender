@@ -25,15 +25,15 @@ usage: wd-pretender.py command [options]
 Windows Defender Update
 
 positional arguments:
-  {bypass,delete}
-    bypass             bypass windows defender rules by threat name
-    delete             delete file by modifying rules
-    freindly           add hash to friendly files
-    
+  {bypass,delete,friendly}
+    bypass              bypass windows defender rules by threat name
+    delete              delete file by modifying rules
+    friendly            add hash to friendly files threat
+
 optional arguments:
-  -h, --help           show this help message and exit
-  -o OUTPUT            output folder for the exported vdm files
-  -d DEFINITIONS_PATH  set explicit definitions path
+  -h, --help            show this help message and exit
+  -o OUTPUT             output folder for the exported vdm files
+  -d DEFINITIONS_PATH   set explicit definitions path
 ```
 
 ### Bypass
