@@ -1,0 +1,6 @@
+*.pyc
+*.zip
+/**/__pycache__/
+/build/
+wd-pretender.spec
+dist/
